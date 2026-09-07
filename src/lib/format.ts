@@ -25,3 +25,13 @@ export function formatApproximate(ms: number): string {
 	const hours = Math.round(minutes / 60);
 	return hours === 1 ? '1 hour' : `${hours} hours`;
 }
+
+/** How long something has sat untouched, for "untouched for 3 days". */
+export function formatAge(ms: number): string {
+	const hours = Math.floor(ms / 3_600_000);
+	if (hours < 1) return 'less than an hour';
+	if (hours < 24) return hours === 1 ? 'an hour' : `${hours} hours`;
+
+	const days = Math.floor(hours / 24);
+	return days === 1 ? 'a day' : `${days} days`;
+}

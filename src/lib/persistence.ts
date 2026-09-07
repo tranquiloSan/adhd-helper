@@ -1,12 +1,14 @@
 import { FACE_OPTIONS, type FaceMinutes } from './dial-geometry';
 import type { ElapsedSnapshot, ElapsedStatus } from './elapsed.svelte';
+import type { NotesSnapshot } from './notes.svelte';
 import type { TimerSnapshot, TimerStatus } from './timer.svelte';
 
 const KEYS = {
 	timer: 'adhd-helper:timer',
 	face: 'adhd-helper:face',
 	elapsed: 'adhd-helper:elapsed',
-	threshold: 'adhd-helper:elapsed-threshold'
+	threshold: 'adhd-helper:elapsed-threshold',
+	notes: 'adhd-helper:notes'
 } as const;
 
 /**
@@ -93,4 +95,17 @@ export function loadThresholdMinutes(): number | null {
 
 export function saveThresholdMinutes(minutes: number): void {
 	write(KEYS.threshold, minutes);
+}
+
+export function loadNotes(): NotesSnapshot | null {
+	return read(KEYS.notes, (value) => {
+		if (typeof value !== 'object' || value === null) return null;
+		const v = value as Record<string, unknown>;
+		const valid = typeof v.text === 'string' && isNullableNumber(v.updatedAt);
+		return valid ? (v as unknown as NotesSnapshot) : null;
+	});
+}
+
+export function saveNotes(snapshot: NotesSnapshot): void {
+	write(KEYS.notes, snapshot);
 }
