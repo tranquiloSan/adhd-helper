@@ -8,7 +8,9 @@ const KEYS = {
 	timer: 'adhd-helper:timer',
 	face: 'adhd-helper:face',
 	elapsed: 'adhd-helper:elapsed',
-	threshold: 'adhd-helper:elapsed-threshold',
+	// Bumped: an earlier version wrote this on mount, so stored values were
+	// defaults nobody chose and the default could never be improved on.
+	threshold: 'adhd-helper:elapsed-threshold-2',
 	notes: 'adhd-helper:notes',
 	day: 'adhd-helper:day',
 	endTime: 'adhd-helper:day-end-time'
