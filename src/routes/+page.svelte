@@ -3,6 +3,7 @@
 	import { Alarm } from '$lib/alarm';
 	import Dial from '$lib/Dial.svelte';
 	import { formatApproximate, formatDuration } from '$lib/format';
+	import { isTypingTarget } from '$lib/keyboard';
 	import { FACE_OPTIONS, type FaceMinutes } from '$lib/dial-geometry';
 	import { loadFaceMinutes, loadSnapshot, saveFaceMinutes, saveSnapshot } from '$lib/persistence';
 	import { PRESET_MINUTES, Timer } from '$lib/timer.svelte';
@@ -103,8 +104,8 @@
 
 	$effect(() => {
 		const onKeydown = (event: KeyboardEvent) => {
-			// Don't hijack keys aimed at the duration field or the dial.
-			if (event.target instanceof HTMLInputElement) return;
+			// Don't hijack keys aimed at a field, the dump, or the dial.
+			if (isTypingTarget(event.target)) return;
 			if (event.target instanceof SVGElement) return;
 			if (event.code !== 'Space') return;
 			event.preventDefault();

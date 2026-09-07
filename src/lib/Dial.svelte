@@ -20,10 +20,6 @@
 		dragMaxMinutes: number;
 		/** Minutes the dial currently represents, for assistive tech. */
 		valueMinutes: number;
-		/** Real-time marks along the face, as fractions from 0 to 1. When given
-		 *  these replace the minute layout and are drawn as radial dividers, so
-		 *  whole hours can be counted. */
-		marks?: { fraction: number; label: string }[];
 		wedgeColour?: string;
 		/** Turns the rim red. An empty face alone reads no differently from an
 		 *  unstarted one. */
@@ -37,7 +33,6 @@
 		faceMinutes,
 		dragMaxMinutes,
 		valueMinutes,
-		marks,
 		wedgeColour = '#dc2626',
 		finished = false,
 		interactive = false,
@@ -133,48 +128,26 @@
 		<path d={wedge} fill={wedgeColour} />
 	{/if}
 
-	{#if marks}
-		<!-- Radial dividers, so remaining whole hours can be counted without reading. -->
-		<g stroke={INK} stroke-width="1" opacity="0.25">
-			{#each marks as mark (mark.label)}
-				<line
-					x1={CENTRE}
-					y1={CENTRE - RADIUS * 0.32}
-					x2={CENTRE}
-					y2={CENTRE - RADIUS}
-					transform="rotate({mark.fraction * 360} {CENTRE} {CENTRE})"
-				/>
-			{/each}
-		</g>
+	<g stroke={INK} stroke-linecap="round">
+		{#each layout.marks as mark (mark.minutes)}
+			<line
+				x1={CENTRE}
+				y1={CENTRE - RADIUS}
+				x2={CENTRE}
+				y2={CENTRE - RADIUS + (mark.major ? 10 : 5)}
+				stroke-width={mark.major ? 2 : 1}
+				opacity={mark.major ? 0.7 : 0.4}
+				transform="rotate({mark.degrees} {CENTRE} {CENTRE})"
+			/>
+		{/each}
+	</g>
 
-		<g fill={INK} font-size="13" font-weight="600" text-anchor="middle" opacity="0.85">
-			{#each marks as mark (mark.label)}
-				{@const point = polarPoint(mark.fraction * 360, LABEL_RADIUS, CENTRE)}
-				<text x={point.x} y={point.y} dominant-baseline="middle">{mark.label}</text>
-			{/each}
-		</g>
-	{:else}
-		<g stroke={INK} stroke-linecap="round">
-			{#each layout.marks as mark (mark.minutes)}
-				<line
-					x1={CENTRE}
-					y1={CENTRE - RADIUS}
-					x2={CENTRE}
-					y2={CENTRE - RADIUS + (mark.major ? 10 : 5)}
-					stroke-width={mark.major ? 2 : 1}
-					opacity={mark.major ? 0.7 : 0.4}
-					transform="rotate({mark.degrees} {CENTRE} {CENTRE})"
-				/>
-			{/each}
-		</g>
-
-		<g fill={INK} font-size="13" font-weight="600" text-anchor="middle" opacity="0.85">
-			{#each layout.numbers as number (number.minutes)}
-				{@const point = polarPoint(number.degrees, LABEL_RADIUS, CENTRE)}
-				<text x={point.x} y={point.y} dominant-baseline="middle">{number.minutes}</text>
-			{/each}
-		</g>
-	{/if}
+	<g fill={INK} font-size="13" font-weight="600" text-anchor="middle" opacity="0.85">
+		{#each layout.numbers as number (number.minutes)}
+			{@const point = polarPoint(number.degrees, LABEL_RADIUS, CENTRE)}
+			<text x={point.x} y={point.y} dominant-baseline="middle">{number.minutes}</text>
+		{/each}
+	</g>
 
 	<!-- Rim last, so wedge and marks stop cleanly against it. Red is the only
 	     signal that the timer has finished, since an empty face alone reads the

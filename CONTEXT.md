@@ -29,6 +29,11 @@ The single box for a thought that would otherwise be lost. Working-memory
 offload, and pointedly not somewhere work is tracked.
 _Avoid_: todo, tasks, backlog
 
+**Timeline**:
+The horizontal track the day is drawn on, running from the time it started to
+the end you named, with the remaining part filled.
+_Avoid_: bar, progress bar, slider
+
 **Dial**:
 The circular face whose filled wedge shrinks as the remaining time falls, and
 which is dragged to set the length. Both the display and the main control.

@@ -7,6 +7,7 @@
 	import { Alarm } from '$lib/alarm';
 	import { day } from '$lib/day.svelte';
 	import { formatDuration } from '$lib/format';
+	import { isTypingTarget } from '$lib/keyboard';
 	import { notes } from '$lib/notes.svelte';
 	import NotesOverlay from '$lib/NotesOverlay.svelte';
 	import { loadDay, loadNotes, saveDay, saveNotes } from '$lib/persistence';
@@ -78,8 +79,7 @@
 				return;
 			}
 
-			const target = event.target;
-			if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return;
+			if (isTypingTarget(event.target)) return;
 			if (event.metaKey || event.ctrlKey || event.altKey) return;
 			if (event.key !== 'n') return;
 			// Redundant on the notes page, which is the same box full size.
