@@ -89,3 +89,7 @@ export class Elapsed {
 		this.#now = now;
 	}
 }
+
+/** Shared: the strip shows it from every page, so it has to keep counting
+ *  while another tool is on screen. */
+export const elapsed = new Elapsed();

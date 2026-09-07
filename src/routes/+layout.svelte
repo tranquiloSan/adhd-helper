@@ -6,11 +6,19 @@
 	import { browser } from '$app/environment';
 	import { Alarm } from '$lib/alarm';
 	import { day } from '$lib/day.svelte';
+	import { elapsed } from '$lib/elapsed.svelte';
 	import { formatDuration } from '$lib/format';
 	import { isTypingTarget } from '$lib/keyboard';
 	import { notes } from '$lib/notes.svelte';
 	import NotesOverlay from '$lib/NotesOverlay.svelte';
-	import { loadDay, loadNotes, saveDay, saveNotes } from '$lib/persistence';
+	import {
+		loadDay,
+		loadElapsed,
+		loadNotes,
+		saveDay,
+		saveElapsed,
+		saveNotes
+	} from '$lib/persistence';
 
 	let { children } = $props();
 
@@ -35,6 +43,9 @@
 
 		const storedNotes = loadNotes();
 		if (storedNotes !== null) notes.restore(storedNotes);
+
+		const storedElapsed = loadElapsed();
+		if (storedElapsed !== null) elapsed.restore(storedElapsed);
 	}
 
 	$effect(() => {
@@ -43,8 +54,19 @@
 		return () => clearInterval(id);
 	});
 
+	// Drives the elapsed dial as well as the strip, so the page does not tick too.
 	$effect(() => {
-		const resync = () => day.sync();
+		if (elapsed.status !== 'running') return;
+		const id = setInterval(() => elapsed.sync(), 500);
+		return () => clearInterval(id);
+	});
+
+	// A throttled tab runs behind on both counts, so catch up when looked at.
+	$effect(() => {
+		const resync = () => {
+			day.sync();
+			elapsed.sync();
+		};
 		document.addEventListener('visibilitychange', resync);
 		window.addEventListener('focus', resync);
 		return () => {
@@ -63,6 +85,10 @@
 
 	$effect(() => {
 		saveDay(day.toSnapshot());
+	});
+
+	$effect(() => {
+		saveElapsed(elapsed.toSnapshot());
 	});
 
 	$effect(() => {
@@ -111,22 +137,34 @@
 		{/each}
 	</nav>
 
-	{#if day.status === 'running'}
-		<p class="pb-1 text-center text-xs text-neutral-500" aria-live="polite">
-			{formatDuration(day.remainingMs)} left today
-		</p>
-	{:else if day.status === 'over'}
-		<div class="flex flex-wrap items-center justify-center gap-2 pb-1 text-xs text-neutral-400">
-			<span aria-live="polite">Day over.</span>
-			{#if !notes.isEmpty}
-				<span>Move anything worth keeping out of your notes, then</span>
-				<button
-					type="button"
-					onclick={() => notes.clear()}
-					class="rounded-full border border-neutral-700 px-3 py-0.5 transition hover:border-neutral-500"
-				>
-					clear them
-				</button>
+	{#if elapsed.status !== 'idle' || day.status !== 'idle'}
+		<div
+			class="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 pb-1 text-xs text-neutral-500"
+		>
+			{#if elapsed.status !== 'idle'}
+				<span aria-live="polite">
+					{formatDuration(elapsed.elapsedMs)} elapsed{elapsed.status === 'paused'
+						? ', paused'
+						: ''}
+				</span>
+			{/if}
+
+			{#if day.status === 'running'}
+				<span aria-live="polite">{formatDuration(day.remainingMs)} left today</span>
+			{:else if day.status === 'over'}
+				<span class="text-neutral-400" aria-live="polite">Day over.</span>
+				{#if !notes.isEmpty}
+					<span class="text-neutral-400">
+						Move anything worth keeping out of your notes, then
+					</span>
+					<button
+						type="button"
+						onclick={() => notes.clear()}
+						class="rounded-full border border-neutral-700 px-3 py-0.5 text-neutral-400 transition hover:border-neutral-500"
+					>
+						clear them
+					</button>
+				{/if}
 			{/if}
 		</div>
 	{/if}

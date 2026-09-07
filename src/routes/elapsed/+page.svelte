@@ -1,25 +1,16 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import Dial from '$lib/Dial.svelte';
-	import { DEFAULT_THRESHOLD_MINUTES, Elapsed } from '$lib/elapsed.svelte';
+	import { DEFAULT_THRESHOLD_MINUTES, elapsed } from '$lib/elapsed.svelte';
 	import { formatDuration } from '$lib/format';
-	import {
-		loadElapsed,
-		loadThresholdMinutes,
-		saveElapsed,
-		saveThresholdMinutes
-	} from '$lib/persistence';
+	import { loadThresholdMinutes, saveThresholdMinutes } from '$lib/persistence';
 
 	/** The elapsed dial always uses an hour face and laps past it. */
 	const FACE_MINUTES = 60;
 
-	const elapsed = new Elapsed();
 	let thresholdMinutes = $state(DEFAULT_THRESHOLD_MINUTES);
 
 	if (browser) {
-		const snapshot = loadElapsed();
-		if (snapshot !== null) elapsed.restore(snapshot);
-
 		const storedThreshold = loadThresholdMinutes();
 		if (storedThreshold !== null) thresholdMinutes = storedThreshold;
 	}
@@ -51,26 +42,6 @@
 			case 'paused':
 				return 'Paused';
 		}
-	});
-
-	$effect(() => {
-		if (elapsed.status !== 'running') return;
-		const id = setInterval(() => elapsed.sync(), 500);
-		return () => clearInterval(id);
-	});
-
-	$effect(() => {
-		const resync = () => elapsed.sync();
-		document.addEventListener('visibilitychange', resync);
-		window.addEventListener('focus', resync);
-		return () => {
-			document.removeEventListener('visibilitychange', resync);
-			window.removeEventListener('focus', resync);
-		};
-	});
-
-	$effect(() => {
-		saveElapsed(elapsed.toSnapshot());
 	});
 
 	function toggle() {
