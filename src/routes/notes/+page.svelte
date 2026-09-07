@@ -72,15 +72,18 @@
 					>{/each}</span
 			>
 		{/each}
+		<span class="text-neutral-500">
+			<kbd class="rounded border border-neutral-700 px-1">cmd</kbd> or
+			<kbd class="rounded border border-neutral-700 px-1">ctrl</kbd> and a click opens a link
+		</span>
 	</div>
 
 	<p class="max-w-prose self-center text-center text-xs leading-relaxed text-neutral-500">
 		Nothing is hidden or reflowed - the symbols stay where you typed them, so the box is still plain
-		text you can paste anywhere. A link opens with cmd or ctrl and a click. Press <kbd
-			class="rounded border border-neutral-700 px-1">n</kbd
-		> on any other page to open this in a panel without leaving what you are doing. Nothing here is ever
-		cleared for you - it would eventually delete something that mattered. The age above is the only nudge,
-		so a pile cannot build up unnoticed. When it is telling you it has sat for days, move anything worth
+		text you can paste anywhere. Press <kbd class="rounded border border-neutral-700 px-1">n</kbd> on
+		any other page to open this in a panel without leaving what you are doing. Nothing here is ever cleared
+		for you - it would eventually delete something that mattered. The age above is the only nudge, so
+		a pile cannot build up unnoticed. When it is telling you it has sat for days, move anything worth
 		keeping into wherever you actually keep things, then clear it.
 	</p>
 </main>
