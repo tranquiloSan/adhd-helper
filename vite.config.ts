@@ -12,7 +12,12 @@ export default defineConfig({
 				runes: ({ filename }) =>
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
-			adapter: adapter()
+			adapter: adapter(),
+			paths: {
+				// The site is served from a GitHub Pages project subpath, not the domain
+				// root. Applied in dev too, so base-path mistakes surface locally.
+				base: '/adhd-helper'
+			}
 		})
 	]
 });
