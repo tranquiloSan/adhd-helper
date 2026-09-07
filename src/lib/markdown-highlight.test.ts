@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { highlight, type Token } from './markdown-highlight';
+import { highlight, linkUrlAt, openableUrl, type Token } from './markdown-highlight';
 
 const joined = (tokens: Token[]) => tokens.map((token) => token.text).join('');
 const kindsOf = (source: string, kind: Token['kind']) =>
@@ -63,5 +63,54 @@ describe('highlight recognises constructs', () => {
 	it('marks list bullets and quote arrows without swallowing the text', () => {
 		expect(kindsOf('- item', 'marker')).toEqual(['- ']);
 		expect(kindsOf('> said', 'quote')).toEqual(['said']);
+	});
+});
+
+describe('linkUrlAt', () => {
+	const source = 'see [docs](https://example.com/a) and more';
+
+	it('finds the url from the label you can read', () => {
+		expect(linkUrlAt(source, source.indexOf('docs'))).toBe('https://example.com/a');
+	});
+
+	it('finds it from the url itself', () => {
+		expect(linkUrlAt(source, source.indexOf('example'))).toBe('https://example.com/a');
+	});
+
+	it('finds nothing in ordinary text', () => {
+		expect(linkUrlAt(source, 1)).toBeNull();
+	});
+
+	it('leaves a link inside a code span alone, exactly as the styling does', () => {
+		const code = 'try `[a](https://example.com)` first';
+		expect(linkUrlAt(code, code.indexOf('example'))).toBeNull();
+	});
+
+	it('picks the link that was clicked, not the first one', () => {
+		const two = '[one](https://a.test) [two](https://b.test)';
+		expect(linkUrlAt(two, two.indexOf('two'))).toBe('https://b.test');
+	});
+});
+
+describe('openableUrl', () => {
+	it('passes the schemes worth opening', () => {
+		expect(openableUrl('https://example.com')).toBe('https://example.com');
+		expect(openableUrl('http://example.com')).toBe('http://example.com');
+		expect(openableUrl('mailto:someone@example.test')).toBe('mailto:someone@example.test');
+	});
+
+	it('refuses a scheme that would run code, which is why it checks at all', () => {
+		expect(openableUrl('javascript:alert(1)')).toBeNull();
+		expect(openableUrl('data:text/html,hi')).toBeNull();
+	});
+
+	it('refuses a bare domain rather than guessing a scheme for it', () => {
+		expect(openableUrl('example.com')).toBeNull();
+	});
+
+	it('refuses nothing at all', () => {
+		expect(openableUrl(null)).toBeNull();
+		expect(openableUrl('')).toBeNull();
+		expect(openableUrl('   ')).toBeNull();
 	});
 });

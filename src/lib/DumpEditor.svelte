@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { TOKEN_CLASSES, highlight } from '$lib/markdown-highlight';
+	import { TOKEN_CLASSES, highlight, linkUrlAt, openableUrl } from '$lib/markdown-highlight';
 	import { notes } from '$lib/notes.svelte';
 
 	type Props = {
@@ -18,6 +18,25 @@
 	$effect(() => {
 		if (autofocus) textarea?.focus();
 	});
+
+	/**
+	 * Follow a link on modifier-click, the way an editor does.
+	 *
+	 * It has to be a modifier: the textarea is on top and owns clicks, because
+	 * that is what places the caret and selects text. The caret is also how we
+	 * learn where the pointer landed - the browser has already moved it there by
+	 * the time this runs, so `selectionStart` is the clicked offset.
+	 */
+	function followLink(event: MouseEvent) {
+		if (!event.metaKey && !event.ctrlKey) return;
+		if (textarea === null) return;
+
+		const url = openableUrl(linkUrlAt(notes.text, textarea.selectionStart));
+		if (url === null) return;
+
+		event.preventDefault();
+		window.open(url, '_blank', 'noopener,noreferrer');
+	}
 
 	/** The painted layer has to follow the textarea exactly. */
 	function syncScroll() {
@@ -47,6 +66,7 @@
 		value={notes.text}
 		oninput={(event) => notes.set(event.currentTarget.value)}
 		onscroll={syncScroll}
+		onclick={followLink}
 		placeholder="Whatever you would otherwise forget."
 		aria-label="Brain dump"
 		spellcheck="false"

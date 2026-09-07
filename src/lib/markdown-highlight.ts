@@ -126,3 +126,54 @@ export function highlight(source: string): Token[] {
 
 	return tokens;
 }
+
+/**
+ * The URL of the link at a character offset, or null if there is no link there.
+ *
+ * Walks the tokens rather than re-scanning with a regex of its own, so what is
+ * clickable is exactly what was painted as a link: a `[a](b)` inside backticks
+ * is a code span, and stays one.
+ *
+ * The label and the URL are both live; the brackets between them are not, which
+ * keeps this to a lookahead of one token.
+ */
+export function linkUrlAt(source: string, index: number): string | null {
+	const tokens = highlight(source);
+	let offset = 0;
+
+	for (let i = 0; i < tokens.length; i += 1) {
+		const token = tokens[i];
+		const end = offset + token.text.length;
+
+		if (index >= offset && index <= end) {
+			if (token.kind === 'url') return token.text;
+			if (token.kind === 'link') {
+				return tokens.slice(i + 1).find((next) => next.kind === 'url')?.text ?? null;
+			}
+		}
+
+		offset = end;
+	}
+
+	return null;
+}
+
+/** Schemes worth opening from a box you can paste anything into. */
+const OPENABLE = ['http:', 'https:', 'mailto:'];
+
+/**
+ * A URL only if it is one we will open.
+ *
+ * The notes box holds whatever you pasted, so the scheme is checked rather than
+ * assumed - `javascript:` in a link is the reason this is not just a click
+ * through. A bare `example.com` is not opened either: guessing a scheme for
+ * text that merely looks like a domain would eventually open the wrong thing.
+ */
+export function openableUrl(url: string | null): string | null {
+	if (url === null) return null;
+	try {
+		return OPENABLE.includes(new URL(url.trim()).protocol) ? url.trim() : null;
+	} catch {
+		return null;
+	}
+}
