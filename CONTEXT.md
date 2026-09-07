@@ -19,6 +19,17 @@ The count-up display. Has no target and never sounds, so it can report a long
 stretch without breaking one.
 _Avoid_: stopwatch, tracker
 
+**Stretch**:
+One run of the elapsed count, from starting it until it is reset. Spans any
+number of breaks, so it is not the same as the time spent counting.
+_Avoid_: session, run, sitting
+
+**Break**:
+The interval a stretch spends paused - the time you were away, which the count
+deliberately excludes. Pausing is the act; a break is what it leaves behind, and
+it carries no description.
+_Avoid_: gap, interruption, rest, downtime
+
 **Day**:
 The countdown to an end time you name, running alongside the timer. Does nothing
 until started, so there are no working hours to store.
@@ -31,7 +42,8 @@ _Avoid_: todo, tasks, backlog
 
 **Timeline**:
 The horizontal track the day is drawn on, running from the time it started to
-the end you named, with the remaining part filled.
+the end you named, with the remaining part filled. Its end is dragged to set
+that time, so like the dial it is both the display and the main control.
 _Avoid_: bar, progress bar, slider
 
 **Dial**:
