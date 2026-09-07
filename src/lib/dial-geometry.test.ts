@@ -74,12 +74,12 @@ describe('faceLayout', () => {
 
 	it('drops per-minute detail past an hour, where it would be unreadable', () => {
 		const { marks } = faceLayout(90);
-		expect(marks).toHaveLength(12);
+		expect(marks.length).toBeLessThan(90);
+		expect(marks.every((mark) => mark.major)).toBe(true);
 	});
 
-	it('still numbers a stretched face, since an unlabelled disc says nothing', () => {
-		const { numbers } = faceLayout(120);
-		expect(numbers.map((n) => n.label)).toEqual([
+	it('numbers a stretched face at a round interval, never a fraction', () => {
+		expect(faceLayout(90).numbers.map((n) => n.label)).toEqual([
 			'10',
 			'20',
 			'30',
@@ -88,23 +88,43 @@ describe('faceLayout', () => {
 			'60',
 			'70',
 			'80',
+			'90'
+		]);
+		expect(faceLayout(150).numbers.map((n) => n.label)).toEqual([
+			'15',
+			'30',
+			'45',
+			'60',
+			'75',
 			'90',
-			'100',
-			'110',
-			'120'
+			'105',
+			'120',
+			'135',
+			'150'
 		]);
 	});
 
-	it('keeps a half minute but not a recurring one', () => {
-		// Ninety over twelve is seven and a half, which reads as a time.
-		expect(faceLayout(90).numbers[0].label).toBe('7.5');
-		// A hundred over twelve recurs, and 8.3333 reads as a bug.
-		expect(faceLayout(100).numbers[0].label).toBe('8.3');
+	it('coarsens the interval as the face grows, rather than crowding the rim', () => {
+		const step = (faceMinutes: number) => faceLayout(faceMinutes).numbers[0].minutes;
+		expect(step(61)).toBe(5);
+		expect(step(90)).toBe(10);
+		expect(step(150)).toBe(15);
+		expect(step(200)).toBe(20);
+		expect(step(600)).toBe(60);
+
+		for (const faceMinutes of [61, 90, 100, 120, 150, 200, 360, 600, 1500]) {
+			expect(faceLayout(faceMinutes).numbers.length).toBeLessThanOrEqual(12);
+		}
 	});
 
-	it('puts the last number of a stretched face at the top too', () => {
-		const { numbers } = faceLayout(120);
-		expect(numbers.at(-1)?.degrees).toBe(360);
+	it('puts the last number at the top when the length is a multiple of the interval', () => {
+		expect(faceLayout(120).numbers.at(-1)?.degrees).toBe(360);
+	});
+
+	it('leaves the top unnumbered otherwise, since the clock already has the total', () => {
+		const { numbers } = faceLayout(121);
+		expect(numbers.at(-1)?.minutes).toBe(120);
+		expect(numbers.at(-1)?.degrees).toBeLessThan(360);
 	});
 });
 

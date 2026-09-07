@@ -286,8 +286,8 @@
 
 		<p class="max-w-prose text-center text-xs leading-relaxed text-neutral-500">
 			Space starts and pauses. The length is locked once running - reset to change it. Type a length
-			longer than the dial offers and the face stretches to fit it, in twelve marks rather than
-			sixty; it then shows what you typed instead of being dragged.
+			longer than the dial offers and the face stretches to fit it, marked at a round interval
+			instead of every minute; it then shows what you typed instead of being dragged.
 		</p>
 	</div>
 

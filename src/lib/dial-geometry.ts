@@ -67,15 +67,28 @@ export type FaceNumber = { minutes: number; degrees: number; label: string };
 /** Numbers are printed every five minutes, whatever the range. */
 const NUMBER_STEP = 5;
 
+/** Intervals a stretched face's marks may fall on, finest first. */
+const FACE_STEPS = [5, 10, 15, 20, 30, 60] as const;
+
+/** About as many marks as an hour face carries numbers. */
+const MAX_STRETCHED_MARKS = 12;
+
 /**
- * A face number as it is printed.
+ * The interval a stretched face is marked at: the finest round one that does
+ * not crowd the rim.
  *
- * A rescaled face divides into twelve whatever the length, so the numbers only
- * come out whole when the length divides by twelve. One decimal place is the
- * limit: "7.5" reads as a time, and "8.3333" reads as a bug.
+ * Dividing the circle into a fixed number of parts instead would put the marks
+ * at whatever the length divides into - 7.5 and 22.5 on a ninety - and the job
+ * of a number on a dial is to be a position you recognise. 15, 30, 45 can be
+ * read at a glance; 8, 23, 38 cannot, however exact each one is.
  */
-function faceLabel(minutes: number): string {
-	return String(Math.round(minutes * 10) / 10);
+function stretchedStep(faceMinutes: number): number {
+	const fits = FACE_STEPS.find((step) => Math.floor(faceMinutes / step) <= MAX_STRETCHED_MARKS);
+	if (fits !== undefined) return fits;
+
+	// Longer than the ladder covers: the nearest half hour that still fits.
+	const HALF_HOUR = 30;
+	return Math.ceil(faceMinutes / MAX_STRETCHED_MARKS / HALF_HOUR) * HALF_HOUR;
 }
 
 /**
@@ -83,22 +96,24 @@ function faceLabel(minutes: number): string {
  * fifth longer, and a number every five minutes.
  *
  * Per-minute detail only stays legible up to an hour. A longer duration
- * rescales the face to fit and gets twelve marks instead, since minute marks
- * would be too dense to read - but they are still numbered, because an
- * unlabelled disc says nothing about how long the length actually is.
+ * rescales the face to fit and is marked at a round interval instead, every
+ * mark numbered. The interval divides the length rather than the circle, so a
+ * length that is not a multiple of it leaves the top of the dial unnumbered -
+ * which costs nothing, because the exact length is already the clock beneath.
  */
 export function faceLayout(faceMinutes: number): { marks: FaceMark[]; numbers: FaceNumber[] } {
 	const degreesPerMinute = 360 / faceMinutes;
 
 	if (faceMinutes > 60) {
-		const twelfths = Array.from({ length: 12 }, (_, i) => ({
-			minutes: ((i + 1) / 12) * faceMinutes,
-			degrees: ((i + 1) / 12) * 360
-		}));
+		const step = stretchedStep(faceMinutes);
+		const stops = Array.from({ length: Math.floor(faceMinutes / step) }, (_, i) => {
+			const minutes = (i + 1) * step;
+			return { minutes, degrees: minutes * degreesPerMinute };
+		});
 
 		return {
-			marks: twelfths.map((twelfth) => ({ ...twelfth, major: true })),
-			numbers: twelfths.map((twelfth) => ({ ...twelfth, label: faceLabel(twelfth.minutes) }))
+			marks: stops.map((stop) => ({ ...stop, major: true })),
+			numbers: stops.map((stop) => ({ ...stop, label: String(stop.minutes) }))
 		};
 	}
 
@@ -113,7 +128,7 @@ export function faceLayout(faceMinutes: number): { marks: FaceMark[]; numbers: F
 
 	const numbers = Array.from({ length: Math.floor(faceMinutes / NUMBER_STEP) }, (_, i) => {
 		const minutes = (i + 1) * NUMBER_STEP;
-		return { minutes, degrees: minutes * degreesPerMinute, label: faceLabel(minutes) };
+		return { minutes, degrees: minutes * degreesPerMinute, label: String(minutes) };
 	});
 
 	return { marks, numbers };
