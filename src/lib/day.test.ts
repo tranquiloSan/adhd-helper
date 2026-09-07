@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DayCountdown, endTimeToday, hourMarks, type DaySnapshot } from './day.svelte';
+import { DayCountdown, hourMarks, resolveEndTime, type DaySnapshot } from './day.svelte';
 
 const MINUTE = 60_000;
 const HOUR = 3_600_000;
@@ -93,18 +93,46 @@ describe('day countdown restore', () => {
 	});
 });
 
-describe('endTimeToday', () => {
-	it('resolves a time to that moment today', () => {
-		const noon = new Date(T0);
-		noon.setHours(15, 30, 0, 0);
-		expect(endTimeToday('15:30', T0)).toBe(noon.getTime());
+describe('resolveEndTime', () => {
+	/** 22:00, so a small-hours end time is in the past today. */
+	function tenPm(): number {
+		const d = new Date(T0);
+		d.setHours(22, 0, 0, 0);
+		return d.getTime();
+	}
+
+	it('resolves a time still to come today', () => {
+		const at = new Date(T0);
+		at.setHours(15, 30, 0, 0);
+		const morning = new Date(T0);
+		morning.setHours(9, 0, 0, 0);
+		expect(resolveEndTime('15:30', morning.getTime())).toBe(at.getTime());
+	});
+
+	it('means tomorrow when the time has already gone', () => {
+		const night = tenPm();
+		const end = resolveEndTime('03:00', night);
+		expect(end).not.toBeNull();
+		expect(end! - night).toBe(5 * HOUR);
+		expect(new Date(end!).getHours()).toBe(3);
+	});
+
+	it('accepts a time without the colon', () => {
+		const morning = new Date(T0);
+		morning.setHours(9, 0, 0, 0);
+		expect(resolveEndTime('1730', morning.getTime())).toBe(
+			resolveEndTime('17:30', morning.getTime())
+		);
+		expect(resolveEndTime('930', morning.getTime())).toBe(
+			resolveEndTime('09:30', morning.getTime())
+		);
 	});
 
 	it('rejects anything that is not a time', () => {
-		expect(endTimeToday('', T0)).toBeNull();
-		expect(endTimeToday('5pm', T0)).toBeNull();
-		expect(endTimeToday('25:00', T0)).toBeNull();
-		expect(endTimeToday('12:70', T0)).toBeNull();
+		expect(resolveEndTime('', T0)).toBeNull();
+		expect(resolveEndTime('5pm', T0)).toBeNull();
+		expect(resolveEndTime('25:00', T0)).toBeNull();
+		expect(resolveEndTime('12:70', T0)).toBeNull();
 	});
 });
 
@@ -144,5 +172,12 @@ describe('hourMarks', () => {
 
 	it('returns nothing for an empty span', () => {
 		expect(hourMarks(T0, T0)).toEqual([]);
+	});
+
+	it('carries on into tomorrow across midnight, padded so 00 reads as an hour', () => {
+		const d = new Date(T0);
+		d.setHours(22, 0, 0, 0);
+		const marks = hourMarks(d.getTime(), d.getTime() + 5 * HOUR);
+		expect(marks.map((m) => m.label)).toEqual(['23', '00', '01', '02']);
 	});
 });

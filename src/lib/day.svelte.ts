@@ -116,9 +116,16 @@ export class DayCountdown {
  *  you are looking at another tool. */
 export const day = new DayCountdown();
 
-/** Turn an `<input type="time">` value into a timestamp today. */
-export function endTimeToday(value: string, now: number = Date.now()): number | null {
-	const match = /^(\d{2}):(\d{2})$/.exec(value);
+/**
+ * Turn a typed end time into a timestamp.
+ *
+ * A time that has already passed today means tomorrow. An evening that runs to
+ * 03:00 is a real day to name, and there is nothing else "03:00" typed at 22:00
+ * could mean. Accepts `1700` and `9:00` as well as `17:00`, since the shape is
+ * unambiguous either way.
+ */
+export function resolveEndTime(value: string, now: number = Date.now()): number | null {
+	const match = /^(\d{1,2}):?(\d{2})$/.exec(value.trim());
 	if (match === null) return null;
 
 	const hours = Number(match[1]);
@@ -127,6 +134,9 @@ export function endTimeToday(value: string, now: number = Date.now()): number | 
 
 	const end = new Date(now);
 	end.setHours(hours, minutes, 0, 0);
+	// setDate rather than adding a day of milliseconds, so the wall-clock time
+	// survives a clock change.
+	if (end.getTime() <= now) end.setDate(end.getDate() + 1);
 	return end.getTime();
 }
 
@@ -139,7 +149,8 @@ export function endTimeToday(value: string, now: number = Date.now()): number | 
  * actual day.
  *
  * Steps by calendar hour rather than by adding an hour of milliseconds, so a
- * clock change does not shift every label.
+ * clock change does not shift every label, and a span that crosses midnight
+ * carries on into the next day's hours.
  */
 export function hourMarks(
 	startedAt: number,
@@ -156,7 +167,7 @@ export function hourMarks(
 	while (cursor.getTime() < endsAt) {
 		marks.push({
 			fraction: (cursor.getTime() - startedAt) / total,
-			label: String(cursor.getHours())
+			label: String(cursor.getHours()).padStart(2, '0')
 		});
 		cursor.setHours(cursor.getHours() + 1);
 	}
