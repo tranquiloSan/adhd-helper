@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_DURATION_MS, Timer, type TimerSnapshot } from './timer.svelte';
+import { DEFAULT_DURATION_MS, Timer, parseLengthMinutes, type TimerSnapshot } from './timer.svelte';
 
 const MINUTE = 60_000;
 
@@ -151,5 +151,39 @@ describe('reset', () => {
 		expect(timer.status).toBe('idle');
 		expect(timer.remainingMs).toBe(5 * MINUTE);
 		expect(timer.overdueMs).toBe(0);
+	});
+});
+
+describe('parseLengthMinutes', () => {
+	it('reads a bare number as minutes', () => {
+		expect(parseLengthMinutes('90')).toBe(90);
+		expect(parseLengthMinutes('25m')).toBe(25);
+	});
+
+	it('reads hours, which is the whole point of it', () => {
+		expect(parseLengthMinutes('2h')).toBe(120);
+		expect(parseLengthMinutes('1.5h')).toBe(90);
+	});
+
+	it('reads the two together', () => {
+		expect(parseLengthMinutes('1h30')).toBe(90);
+		expect(parseLengthMinutes('1h30m')).toBe(90);
+		expect(parseLengthMinutes('2 h 15')).toBe(135);
+	});
+
+	it('ignores case and surrounding space', () => {
+		expect(parseLengthMinutes('  2H  ')).toBe(120);
+	});
+
+	it('rejects anything that is not a length', () => {
+		// The pattern is all-optional, so an empty field has to be caught.
+		expect(parseLengthMinutes('')).toBeNull();
+		expect(parseLengthMinutes('   ')).toBeNull();
+		expect(parseLengthMinutes('h')).toBeNull();
+		expect(parseLengthMinutes('0')).toBeNull();
+		expect(parseLengthMinutes('abc')).toBeNull();
+		expect(parseLengthMinutes('2h2h')).toBeNull();
+		// Not supported on purpose: "2h" says it without the multiplying.
+		expect(parseLengthMinutes('4*60')).toBeNull();
 	});
 });

@@ -5,6 +5,28 @@ export const PRESET_MINUTES = [5, 10, 25] as const;
 
 export const DEFAULT_DURATION_MS = 25 * 60_000;
 
+/** Hours, minutes, or both: "90", "2h", "1h30", "1h30m", "1.5h". */
+const TYPED_LENGTH = /^\s*(?:(\d+(?:\.\d+)?)\s*h)?\s*(?:(\d+(?:\.\d+)?)\s*m?)?\s*$/i;
+
+/**
+ * A typed length in minutes, or null if it is not a length.
+ *
+ * Hours are understood because the clock already speaks them - a two hour timer
+ * reads "2:00:00" - so a field that only took minutes made you convert in your
+ * head to say something the tool would immediately convert back.
+ */
+export function parseLengthMinutes(value: string): number | null {
+	const match = TYPED_LENGTH.exec(value);
+	if (match === null) return null;
+
+	const [, hours, minutes] = match;
+	// The pattern is all-optional, so an empty field matches it.
+	if (hours === undefined && minutes === undefined) return null;
+
+	const total = (hours === undefined ? 0 : Number(hours) * 60) + Number(minutes ?? 0);
+	return total > 0 ? total : null;
+}
+
 /** The timer reduced to plain data, for storing between visits. */
 export type TimerSnapshot = {
 	durationMs: number;

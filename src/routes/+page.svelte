@@ -6,7 +6,7 @@
 	import { isTypingTarget } from '$lib/keyboard';
 	import { FACE_OPTIONS, MAX_FACE_MINUTES, faceFor, type FaceMinutes } from '$lib/dial-geometry';
 	import { loadFaceMinutes, loadSnapshot, saveFaceMinutes, saveSnapshot } from '$lib/persistence';
-	import { PRESET_MINUTES, Timer } from '$lib/timer.svelte';
+	import { PRESET_MINUTES, Timer, parseLengthMinutes } from '$lib/timer.svelte';
 
 	const timer = new Timer();
 	const alarm = new Alarm();
@@ -28,7 +28,7 @@
 		faceMinutes = faceFor(Math.max(storedFace, Math.ceil(timer.durationMs / 60_000)));
 	}
 
-	let customMinutes = $state('');
+	let customLength = $state('');
 
 	const clock = $derived(formatDuration(timer.remainingMs));
 
@@ -159,13 +159,13 @@
 	}
 
 	function setMinutes(minutes: number) {
-		customMinutes = '';
+		customLength = '';
 		timer.setDurationMs(minutes * 60_000);
 	}
 
-	function applyCustomMinutes() {
-		const typed = Number(customMinutes);
-		if (!Number.isFinite(typed) || typed <= 0) return;
+	function applyCustomLength() {
+		const typed = parseLengthMinutes(customLength);
+		if (typed === null) return;
 
 		// Clamped to the longest face, so a length always has a face that fits.
 		const minutes = Math.min(typed, MAX_FACE_MINUTES);
@@ -286,19 +286,15 @@
 			<label
 				class="flex items-center gap-2 rounded-full border border-neutral-700 px-3 py-1.5 text-sm"
 			>
-				<span class="sr-only">Custom duration in minutes</span>
+				<span class="sr-only">Custom length, in minutes or in hours with an h</span>
 				<input
-					type="number"
-					min="1"
-					max="600"
-					inputmode="numeric"
-					placeholder="Custom"
-					bind:value={customMinutes}
-					oninput={applyCustomMinutes}
+					type="text"
+					placeholder="25 or 2h"
+					bind:value={customLength}
+					oninput={applyCustomLength}
 					disabled={!editable}
-					class="w-20 bg-transparent tabular-nums outline-none placeholder:text-neutral-500 disabled:opacity-40"
+					class="w-24 bg-transparent tabular-nums outline-none placeholder:text-neutral-500 disabled:opacity-40"
 				/>
-				<span class="text-neutral-500">min</span>
 			</label>
 		</div>
 
@@ -326,7 +322,8 @@
 			Space starts and pauses. The length is locked once running - reset to change it. Type a length
 			longer than the dial holds and the face grows to the next round size that fits, marked at a
 			round interval instead of every minute. It stays there, and stays draggable, until you pick
-			one of the sizes above again or fit it back down to the length.
+			one of the sizes above again or fit it back down to the length. The custom field takes
+			minutes, or hours with an h - 90, 2h and 1h30 all work.
 		</p>
 	</div>
 
