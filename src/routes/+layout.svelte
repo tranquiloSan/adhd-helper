@@ -143,9 +143,7 @@
 		>
 			{#if elapsed.status !== 'idle'}
 				<span aria-live="polite">
-					{formatDuration(elapsed.elapsedMs)} elapsed{elapsed.status === 'paused'
-						? ', paused'
-						: ''}
+					{formatDuration(elapsed.elapsedMs)} elapsed{elapsed.status === 'paused' ? ', paused' : ''}
 				</span>
 			{/if}
 
