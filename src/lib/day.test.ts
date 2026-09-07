@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DayCountdown, endTimeToday, type DaySnapshot } from './day.svelte';
+import { DayCountdown, endTimeToday, hourMarks, type DaySnapshot } from './day.svelte';
 
 const MINUTE = 60_000;
 const HOUR = 3_600_000;
@@ -105,5 +105,44 @@ describe('endTimeToday', () => {
 		expect(endTimeToday('5pm', T0)).toBeNull();
 		expect(endTimeToday('25:00', T0)).toBeNull();
 		expect(endTimeToday('12:70', T0)).toBeNull();
+	});
+});
+
+describe('hourMarks', () => {
+	/** 09:00 on an arbitrary day, so the labels are predictable. */
+	function nineAm(): number {
+		const d = new Date(T0);
+		d.setHours(9, 0, 0, 0);
+		return d.getTime();
+	}
+
+	it('labels every whole hour between start and end', () => {
+		const start = nineAm();
+		const marks = hourMarks(start, start + 6 * HOUR);
+		expect(marks.map((m) => m.label)).toEqual(['10', '11', '12', '13', '14']);
+	});
+
+	it('places them proportionally along the span', () => {
+		const start = nineAm();
+		const marks = hourMarks(start, start + 6 * HOUR);
+		// 10:00 is one hour into a six hour day.
+		expect(marks[0].fraction).toBeCloseTo(1 / 6);
+		expect(marks[4].fraction).toBeCloseTo(5 / 6);
+	});
+
+	it('excludes the end itself, which is already the edge of the span', () => {
+		const start = nineAm();
+		const marks = hourMarks(start, start + 2 * HOUR);
+		expect(marks.map((m) => m.label)).toEqual(['10']);
+	});
+
+	it('handles a start that is not on the hour', () => {
+		const start = nineAm() + 20 * MINUTE;
+		const marks = hourMarks(start, start + 2 * HOUR);
+		expect(marks.map((m) => m.label)).toEqual(['10', '11']);
+	});
+
+	it('returns nothing for an empty span', () => {
+		expect(hourMarks(T0, T0)).toEqual([]);
 	});
 });

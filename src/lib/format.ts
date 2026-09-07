@@ -35,3 +35,10 @@ export function formatAge(ms: number): string {
 	const days = Math.floor(hours / 24);
 	return days === 1 ? 'a day' : `${days} days`;
 }
+
+/** A timestamp as a 24-hour clock time, zero-padded. */
+export function formatTimeOfDay(timestamp: number): string {
+	const date = new Date(timestamp);
+	const pad = (n: number) => String(n).padStart(2, '0');
+	return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}

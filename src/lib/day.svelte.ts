@@ -26,6 +26,14 @@ export class DayCountdown {
 	#announced = $state(false);
 	#now = $state(Date.now());
 
+	get startedAt(): number | null {
+		return this.#startedAt;
+	}
+
+	get endsAt(): number | null {
+		return this.#endsAt;
+	}
+
 	get remainingMs(): number {
 		if (this.status !== 'running' || this.#endsAt === null) return 0;
 		return Math.max(0, this.#endsAt - this.#now);
@@ -120,4 +128,38 @@ export function endTimeToday(value: string, now: number = Date.now()): number | 
 	const end = new Date(now);
 	end.setHours(hours, minutes, 0, 0);
 	return end.getTime();
+}
+
+/**
+ * Where each whole hour falls inside the day, as a fraction from 0 to 1, and
+ * the clock hour to label it with.
+ *
+ * This is what makes the day readable: without real times the track carries no
+ * information and the fill is the only signal. With them it is a map of the
+ * actual day.
+ *
+ * Steps by calendar hour rather than by adding an hour of milliseconds, so a
+ * clock change does not shift every label.
+ */
+export function hourMarks(
+	startedAt: number,
+	endsAt: number
+): { fraction: number; label: string }[] {
+	const total = endsAt - startedAt;
+	if (total <= 0) return [];
+
+	const marks: { fraction: number; label: string }[] = [];
+	const cursor = new Date(startedAt);
+	cursor.setMinutes(0, 0, 0);
+	cursor.setHours(cursor.getHours() + 1);
+
+	while (cursor.getTime() < endsAt) {
+		marks.push({
+			fraction: (cursor.getTime() - startedAt) / total,
+			label: String(cursor.getHours())
+		});
+		cursor.setHours(cursor.getHours() + 1);
+	}
+
+	return marks;
 }

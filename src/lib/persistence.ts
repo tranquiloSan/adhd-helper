@@ -11,7 +11,8 @@ const KEYS = {
 	threshold: 'adhd-helper:elapsed-threshold',
 	notes: 'adhd-helper:notes',
 	day: 'adhd-helper:day',
-	endTime: 'adhd-helper:day-end-time'
+	endTime: 'adhd-helper:day-end-time',
+	dayView: 'adhd-helper:day-view'
 } as const;
 
 /**
@@ -141,4 +142,16 @@ export function loadEndTime(): string | null {
 
 export function saveEndTime(value: string): void {
 	write(KEYS.endTime, value);
+}
+
+/** Which day drawing to use. Temporary: here so the two can be compared with a
+ *  real day, and due to go once one of them wins. */
+export type DayView = 'bar' | 'dial';
+
+export function loadDayView(): DayView | null {
+	return read(KEYS.dayView, (value) => (value === 'bar' || value === 'dial' ? value : null));
+}
+
+export function saveDayView(view: DayView): void {
+	write(KEYS.dayView, view);
 }
