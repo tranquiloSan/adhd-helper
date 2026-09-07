@@ -8,6 +8,7 @@
 	import { day } from '$lib/day.svelte';
 	import { formatDuration } from '$lib/format';
 	import { notes } from '$lib/notes.svelte';
+	import NotesOverlay from '$lib/NotesOverlay.svelte';
 	import { loadDay, loadNotes, saveDay, saveNotes } from '$lib/persistence';
 
 	let { children } = $props();
@@ -20,6 +21,8 @@
 	] as const;
 
 	const alarm = new Alarm();
+
+	let dumpOpen = $state(false);
 
 	// The day countdown and the dump are hydrated and persisted here rather than
 	// on their own pages: the day has to keep counting while you are looking at
@@ -64,6 +67,31 @@
 	$effect(() => {
 		saveNotes(notes.toSnapshot());
 	});
+
+	// "n" from anywhere opens the dump, already focused. Capture has to cost
+	// nothing, and navigating to a page costs more than the thought survives.
+	$effect(() => {
+		const onKeydown = (event: KeyboardEvent) => {
+			// Checked before the typing guard, so Escape works from inside the box.
+			if (event.key === 'Escape') {
+				dumpOpen = false;
+				return;
+			}
+
+			const target = event.target;
+			if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return;
+			if (event.metaKey || event.ctrlKey || event.altKey) return;
+			if (event.key !== 'n') return;
+			// Redundant on the notes page, which is the same box full size.
+			if (page.url.pathname === resolve('/notes')) return;
+
+			event.preventDefault();
+			dumpOpen = true;
+		};
+
+		window.addEventListener('keydown', onKeydown);
+		return () => window.removeEventListener('keydown', onKeydown);
+	});
 </script>
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
@@ -101,6 +129,10 @@
 				</button>
 			{/if}
 		</div>
+	{/if}
+
+	{#if dumpOpen}
+		<NotesOverlay onclose={() => (dumpOpen = false)} />
 	{/if}
 
 	{@render children()}

@@ -56,8 +56,10 @@
 	</div>
 
 	<p class="max-w-prose text-xs leading-relaxed text-neutral-500">
-		Nothing here is ever cleared for you - it would eventually delete something that mattered. The
-		age above is the only nudge, so a pile cannot build up unnoticed. When it is telling you it has
-		sat for days, move anything worth keeping into wherever you actually keep things, then clear it.
+		Press <kbd class="rounded border border-neutral-700 px-1">n</kbd> on any other page to open this in
+		a panel without leaving what you are doing. Nothing here is ever cleared for you - it would eventually
+		delete something that mattered. The age above is the only nudge, so a pile cannot build up unnoticed.
+		When it is telling you it has sat for days, move anything worth keeping into wherever you actually
+		keep things, then clear it.
 	</p>
 </main>
