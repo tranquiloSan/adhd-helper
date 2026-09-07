@@ -116,7 +116,7 @@
 <svg
 	bind:this={svg}
 	viewBox="0 0 {SIZE} {SIZE}"
-	class="w-[min(82vw,26rem)] touch-none select-none {interactive
+	class="w-[min(82vw,26rem)] touch-none rounded-full outline-none select-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-red-500 {interactive
 		? 'cursor-pointer'
 		: 'cursor-default'}"
 	role="slider"
