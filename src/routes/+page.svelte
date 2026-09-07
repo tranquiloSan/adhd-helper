@@ -164,9 +164,7 @@
 	/>
 </svelte:head>
 
-<main
-	class="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center gap-6 px-6 py-10"
->
+<main class="mx-auto flex w-full max-w-3xl flex-col items-center justify-center gap-6 px-6 py-4">
 	<Dial
 		remainingMs={timer.remainingMs}
 		durationMs={timer.durationMs}
@@ -260,15 +258,9 @@
 		</p>
 	</div>
 
-	<footer class="max-w-prose text-center text-xs leading-relaxed text-neutral-500">
-		<p>
-			A countdown you can read at a glance, for when time stops being noticeable and for getting
-			pulled out of something you have sunk too long into. It keeps running if you reload, and tells
-			you if it finished while the tab was shut.
-		</p>
-		<p class="mt-2">
-			Built for a desktop browser. On a phone the alarm will not fire once the tab is in the
-			background, so treat it as desktop-only.
-		</p>
-	</footer>
+	<p class="max-w-prose text-center text-xs leading-relaxed text-neutral-500">
+		A countdown you can read at a glance, for when time stops being noticeable and for getting
+		pulled out of something you have sunk too long into. It keeps running if you reload, and tells
+		you if it finished while the tab was shut.
+	</p>
 </main>
