@@ -151,17 +151,12 @@
 				<span aria-live="polite">{formatDuration(day.remainingMs)} left today</span>
 			{:else if day.status === 'over'}
 				<span class="text-neutral-400" aria-live="polite">Day over.</span>
+				<!-- A reminder, not a control: clearing has to stay a deliberate act on the
+				     notes themselves, where what you are about to lose is in front of you. -->
 				{#if !notes.isEmpty}
 					<span class="text-neutral-400">
-						Move anything worth keeping out of your notes, then
+						Don't forget your notes - move anything worth keeping, then clear them.
 					</span>
-					<button
-						type="button"
-						onclick={() => notes.clear()}
-						class="rounded-full border border-neutral-700 px-3 py-0.5 text-neutral-400 transition hover:border-neutral-500"
-					>
-						clear them
-					</button>
 				{/if}
 			{/if}
 		</div>
