@@ -50,6 +50,17 @@
 	 *  Still a face: draggable, and switchable back with the buttons. */
 	const grown = $derived(!FACE_OPTIONS.some((option) => option === faceMinutes));
 
+	/**
+	 * The smallest face the current length fits on.
+	 *
+	 * Ceiling rather than rounding, because a length of 60.5 does not fit on a
+	 * 60 face - it needs the next one up.
+	 */
+	const smallestFace = $derived(faceFor(Math.ceil(timer.durationMs / 60_000)));
+	/** Offered only when it would move: a control that never does anything is
+	 *  noise, and pressing 30 or 60 clamps the length whereas this does not. */
+	const canFit = $derived(smallestFace < faceMinutes);
+
 	const caption = $derived.by(() => {
 		switch (timer.status) {
 			case 'idle':
@@ -171,6 +182,12 @@
 		if (timer.durationMs > minutes * 60_000) setMinutes(minutes);
 	}
 
+	/** Shrink the face to the length, rather than the length to a face. Needs no
+	 *  clamp: the smallest face that fits is still one that fits. */
+	function fitFace() {
+		faceMinutes = smallestFace;
+	}
+
 	const isPreset = (minutes: number) => timer.durationMs === minutes * 60_000;
 
 	const buttonLabel = $derived(
@@ -228,12 +245,25 @@
 
 			{#if grown}
 				<!-- The face in use, shown beside the two that can still be picked. -->
-				<span
-					class="rounded-full border border-neutral-400 px-3 py-1 text-neutral-200 tabular-nums"
-				>
-					{faceMinutes} min
+				<span class="inline-flex items-center gap-2">
+					<span
+						class="rounded-full border border-neutral-400 px-3 py-1 text-neutral-200 tabular-nums"
+					>
+						{faceMinutes} min
+					</span>
+					<span>- rounded up to fit what you typed</span>
 				</span>
-				<span>- rounded up to fit what you typed</span>
+			{/if}
+
+			{#if canFit}
+				<button
+					type="button"
+					onclick={fitFace}
+					disabled={!editable}
+					class="rounded-full border border-neutral-800 px-3 py-1 tabular-nums transition hover:border-neutral-600 disabled:opacity-40"
+				>
+					Fit to {smallestFace} min
+				</button>
 			{/if}
 		</div>
 
@@ -296,7 +326,7 @@
 			Space starts and pauses. The length is locked once running - reset to change it. Type a length
 			longer than the dial holds and the face grows to the next round size that fits, marked at a
 			round interval instead of every minute. It stays there, and stays draggable, until you pick
-			one of the sizes above again.
+			one of the sizes above again or fit it back down to the length.
 		</p>
 	</div>
 

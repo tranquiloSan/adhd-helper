@@ -163,6 +163,17 @@ describe('faceFor', () => {
 		expect(faceFor(121)).toBe(150);
 	});
 
+	it('is the smallest rung that fits, which is what the fit button offers', () => {
+		for (const minutes of [1, 25, 30, 31, 60, 61, 90, 91, 120, 121, 200, 400, 600]) {
+			const face = faceFor(minutes);
+			expect(face).toBeGreaterThanOrEqual(minutes);
+			// Nothing smaller on the ladder would have fitted.
+			for (const rung of FACE_LADDER.filter((candidate) => candidate < face)) {
+				expect(rung).toBeLessThan(minutes);
+			}
+		}
+	});
+
 	it('stops at the longest face there is', () => {
 		expect(faceFor(MAX_FACE_MINUTES)).toBe(MAX_FACE_MINUTES);
 		expect(faceFor(10_000)).toBe(MAX_FACE_MINUTES);
