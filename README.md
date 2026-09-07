@@ -1,42 +1,47 @@
-# sv
+# adhd-helper
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+Small, glanceable tools for the way time goes missing with ADHD.
 
-## Creating a project
+### → [tranquilosan.github.io/adhd-helper](https://tranquilosan.github.io/adhd-helper/)
 
-If you're seeing this, you've probably already done this step. Congrats!
+Nothing to install and no account. Everything you type stays in your own
+browser — there is no server to send it to.
+
+## The tools
+
+| Tool        | What it does                                                                                                                |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------- |
+| **Timer**   | Drag the dial to set minutes. Time left is a shrinking wedge you can read at a glance; the alarm repeats until you stop it. |
+| **Elapsed** | Counts up. No target and no alarm, so it can tell you how long you have been at something without breaking it.              |
+| **Day**     | Say when you are stopping. Shows what is left of the day as a bar marked with real clock times.                             |
+| **Notes**   | Press <kbd>n</kbd> on any page for a box to put a thought in before it goes. Markdown is styled as you type.                |
+
+## A few deliberate choices
+
+- **Time is derived from timestamps, never counted by a ticker.** Browsers
+  throttle background tabs, so a counting timer drifts or stalls exactly when
+  you need it. Close the tab mid-timer and it comes back correct.
+- **The countdown locks once started.** Changing it means resetting first. That
+  friction is the point: nudging a running timer onwards is how "five more
+  minutes" happens.
+- **Nothing is ever deleted for you.** The notes box tells you how long it has
+  sat untouched, and waits for you to clear it.
+- **Desktop only.** iOS suspends background pages and only permits
+  notifications for installed web apps, so a phone alarm needs a server behind
+  it. [ADR&nbsp;0001](docs/adr/0001-desktop-only-no-background-timing.md) has
+  the detail.
+
+## Running it locally
+
+Needs Node 24 — `nvm use`, or `nix develop` if you use direnv.
 
 ```sh
-# create a new project
-npx sv create my-app
-```
-
-To recreate this project with the same configuration:
-
-```sh
-# recreate this project
-npx sv@0.17.0 create --template minimal --types ts --add tailwindcss="plugins:none" sveltekit-adapter="adapter:static" prettier --no-download-check --install npm .
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
+npm install
 npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
 ```
 
-## Building
+`npm run lint`, `npm run check`, `npm test` and `npm run build` are the same
+checks CI runs.
 
-To create a production version of your app:
-
-```sh
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+Found a problem or want something added?
+[Open an issue](https://github.com/tranquiloSan/adhd-helper/issues).
