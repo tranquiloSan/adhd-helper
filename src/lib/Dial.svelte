@@ -10,18 +10,34 @@
 	} from '$lib/dial-geometry';
 
 	type Props = {
-		remainingMs: number;
-		durationMs: number;
-		/** The dial's range. Drag cannot reach past it. */
-		faceMinutes: FaceMinutes;
-		finished: boolean;
-		/** Whether the dial can be dragged. False once the timer has started. */
-		interactive: boolean;
-		onSetMinutes: (minutes: number) => void;
+		/** How much of the face to fill, 0 to 1. The countdown drains it; the
+		 *  elapsed display fills it. */
+		fraction: number;
+		/** Range the face is laid out for. May exceed an hour, in which case the
+		 *  per-minute detail is dropped. */
+		faceMinutes: number;
+		/** Furthest a drag may reach, and the slider's maximum. */
+		dragMaxMinutes: number;
+		/** Minutes the dial currently represents, for assistive tech. */
+		valueMinutes: number;
+		wedgeColour?: string;
+		/** Turns the rim red. An empty face alone reads no differently from an
+		 *  unstarted one. */
+		finished?: boolean;
+		interactive?: boolean;
+		onSetMinutes?: (minutes: number) => void;
 	};
 
-	let { remainingMs, durationMs, faceMinutes, finished, interactive, onSetMinutes }: Props =
-		$props();
+	let {
+		fraction,
+		faceMinutes,
+		dragMaxMinutes,
+		valueMinutes,
+		wedgeColour = '#dc2626',
+		finished = false,
+		interactive = false,
+		onSetMinutes
+	}: Props = $props();
 
 	const SIZE = DIAL_SIZE;
 	const CENTRE = DIAL_CENTRE;
@@ -29,35 +45,24 @@
 	const LABEL_RADIUS = RADIUS - 21;
 
 	const FACE = '#f2ece0';
-	const WEDGE = '#dc2626';
 	const INK = '#1c1917';
 
 	let svg: SVGSVGElement | null = null;
 	let dragging = $state(false);
 
-	const remainingMinutes = $derived(remainingMs / 60_000);
-	const durationMinutes = $derived(Math.round(durationMs / 60_000));
-
-	/**
-	 * A real Time Timer has a fixed face: on a 30-minute face, 25 minutes covers
-	 * 25/30 of the circle, so a given amount of red always means the same amount
-	 * of time. The face only rescales for a duration that will not fit on it.
-	 */
-	const face = $derived(Math.max(faceMinutes, Math.ceil(durationMs / 60_000)));
-
-	const fraction = $derived(Math.min(1, Math.max(0, remainingMinutes / face)));
-	const wedge = $derived(wedgePath(fraction, RADIUS, CENTRE));
-	const layout = $derived(faceLayout(face));
+	const clamped = $derived(Math.min(1, Math.max(0, fraction)));
+	const wedge = $derived(wedgePath(clamped, RADIUS, CENTRE));
+	const layout = $derived(faceLayout(faceMinutes));
 
 	/** Turn a pointer position into whole minutes on the dial. */
 	function minutesAt(clientX: number, clientY: number): number {
-		if (svg === null) return durationMinutes;
+		if (svg === null) return valueMinutes;
 
 		const rect = svg.getBoundingClientRect();
 		return minutesFromPoint(
 			((clientX - rect.left) / rect.width) * SIZE,
 			((clientY - rect.top) / rect.height) * SIZE,
-			faceMinutes,
+			dragMaxMinutes,
 			CENTRE
 		);
 	}
@@ -66,12 +71,12 @@
 		if (!interactive) return;
 		dragging = true;
 		svg?.setPointerCapture(event.pointerId);
-		onSetMinutes(minutesAt(event.clientX, event.clientY));
+		onSetMinutes?.(minutesAt(event.clientX, event.clientY));
 	}
 
 	function onPointerMove(event: PointerEvent) {
 		if (!dragging) return;
-		onSetMinutes(minutesAt(event.clientX, event.clientY));
+		onSetMinutes?.(minutesAt(event.clientX, event.clientY));
 	}
 
 	function onPointerUp(event: PointerEvent) {
@@ -92,8 +97,8 @@
 		if (delta === 0) return;
 
 		event.preventDefault();
-		const next = Math.min(faceMinutes, Math.max(1, durationMinutes + delta));
-		onSetMinutes(next);
+		const next = Math.min(dragMaxMinutes, Math.max(1, valueMinutes + delta));
+		onSetMinutes?.(next);
 	}
 </script>
 
@@ -108,8 +113,8 @@
 	aria-label="Timer duration in minutes"
 	aria-disabled={!interactive}
 	aria-valuemin={1}
-	aria-valuemax={faceMinutes}
-	aria-valuenow={durationMinutes}
+	aria-valuemax={dragMaxMinutes}
+	aria-valuenow={valueMinutes}
 	onpointerdown={onPointerDown}
 	onpointermove={onPointerMove}
 	onpointerup={onPointerUp}
@@ -120,7 +125,7 @@
 	<circle cx={CENTRE} cy={CENTRE} r={RADIUS} fill={FACE} />
 
 	{#if wedge !== ''}
-		<path d={wedge} fill={WEDGE} />
+		<path d={wedge} fill={wedgeColour} />
 	{/if}
 
 	<g stroke={INK} stroke-linecap="round">
@@ -152,7 +157,7 @@
 		cy={CENTRE}
 		r={RADIUS}
 		fill="none"
-		stroke={finished ? WEDGE : INK}
+		stroke={finished ? '#dc2626' : INK}
 		stroke-width={finished ? 8 : 6}
 		opacity="0.9"
 	/>

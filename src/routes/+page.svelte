@@ -25,6 +25,14 @@
 	let customMinutes = $state('');
 
 	const clock = $derived(formatDuration(timer.remainingMs));
+
+	/**
+	 * A real Time Timer has a fixed face: on a 30-minute face, 25 minutes covers
+	 * 25/30 of the circle, so a given amount of red always means the same amount
+	 * of time. The face only rescales for a duration that will not fit on it.
+	 */
+	const face = $derived(Math.max(faceMinutes, Math.ceil(timer.durationMs / 60_000)));
+	const filled = $derived(timer.remainingMs / 60_000 / face);
 	/** The duration is locked once started; only a reset unlocks it. */
 	const editable = $derived(timer.status === 'idle');
 
@@ -166,9 +174,10 @@
 
 <main class="mx-auto flex w-full max-w-3xl flex-col items-center justify-center gap-6 px-6 py-4">
 	<Dial
-		remainingMs={timer.remainingMs}
-		durationMs={timer.durationMs}
-		{faceMinutes}
+		fraction={filled}
+		faceMinutes={face}
+		dragMaxMinutes={faceMinutes}
+		valueMinutes={Math.round(timer.durationMs / 60_000)}
 		finished={timer.status === 'finished'}
 		interactive={editable}
 		onSetMinutes={setMinutes}
