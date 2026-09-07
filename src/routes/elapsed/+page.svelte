@@ -73,10 +73,6 @@
 		saveElapsed(elapsed.toSnapshot());
 	});
 
-	$effect(() => {
-		saveThresholdMinutes(thresholdMinutes);
-	});
-
 	function toggle() {
 		switch (elapsed.status) {
 			case 'idle':
@@ -95,6 +91,8 @@
 		const value = Number((event.currentTarget as HTMLInputElement).value);
 		if (!Number.isFinite(value) || value <= 0) return;
 		thresholdMinutes = Math.round(value);
+		// Saved only on a real change, so the default stays free to move.
+		saveThresholdMinutes(thresholdMinutes);
 	}
 
 	const buttonLabel = $derived(

@@ -1,7 +1,9 @@
 export type ElapsedStatus = 'idle' | 'running' | 'paused';
 
-/** How long a stretch has to run before the dial starts warming. */
-export const DEFAULT_THRESHOLD_MINUTES = 90;
+/** How long a stretch has to run before the dial starts warming. One full lap
+ *  of the hour face, so the colour changing and the wedge coming round are the
+ *  same moment rather than two unrelated signals. */
+export const DEFAULT_THRESHOLD_MINUTES = 60;
 
 export type ElapsedSnapshot = {
 	status: ElapsedStatus;
