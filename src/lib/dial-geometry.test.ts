@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DIAL_CENTRE, minutesFromPoint, wedgePath } from './dial-geometry';
+import { DIAL_CENTRE, faceLayout, minutesFromPoint, polarPoint, wedgePath } from './dial-geometry';
 
 const RADIUS = 100;
 const C = DIAL_CENTRE;
@@ -51,5 +51,43 @@ describe('minutesFromPoint', () => {
 
 	it('ignores distance from the centre, so a drag off the disc still tracks', () => {
 		expect(minutesFromPoint(C + 900, C, 60)).toBe(minutesFromPoint(C + 10, C, 60));
+	});
+});
+
+describe('faceLayout', () => {
+	it('marks every minute of a thirty minute face, numbering every fifth', () => {
+		const { marks, numbers } = faceLayout(30);
+		expect(marks).toHaveLength(30);
+		expect(numbers.map((n) => n.minutes)).toEqual([5, 10, 15, 20, 25, 30]);
+	});
+
+	it('marks every minute of an hour face, numbering every fifth', () => {
+		const { marks, numbers } = faceLayout(60);
+		expect(marks).toHaveLength(60);
+		expect(numbers.map((n) => n.minutes)).toEqual([5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60]);
+	});
+
+	it('puts the last number at the top of the dial', () => {
+		const { numbers } = faceLayout(30);
+		expect(numbers.at(-1)?.degrees).toBe(360);
+	});
+
+	it('drops per-minute detail past an hour, where it would be unreadable', () => {
+		const { marks, numbers } = faceLayout(90);
+		expect(marks).toHaveLength(12);
+		expect(numbers).toEqual([]);
+	});
+});
+
+describe('polarPoint', () => {
+	it('places zero degrees at the top', () => {
+		const { x, y } = polarPoint(0, 100, 150);
+		expect(x).toBeCloseTo(150);
+		expect(y).toBeCloseTo(50);
+	});
+
+	it('runs clockwise', () => {
+		expect(polarPoint(90, 100, 150).x).toBeCloseTo(250);
+		expect(polarPoint(180, 100, 150).y).toBeCloseTo(250);
 	});
 });

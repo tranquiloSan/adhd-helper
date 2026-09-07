@@ -1,3 +1,4 @@
+import { FACE_OPTIONS, type FaceMinutes } from './dial-geometry';
 import type { TimerSnapshot, TimerStatus } from './timer.svelte';
 
 const KEY = 'adhd-helper:timer';
@@ -41,5 +42,28 @@ export function saveSnapshot(snapshot: TimerSnapshot): void {
 		localStorage.setItem(KEY, JSON.stringify(snapshot));
 	} catch {
 		// Persistence is a convenience; losing it must not break the timer.
+	}
+}
+
+const FACE_KEY = 'adhd-helper:face';
+
+/** The chosen dial range is a preference, not timer state, so it is stored apart
+ *  from the snapshot and survives a reset. */
+export function loadFaceMinutes(): FaceMinutes | null {
+	try {
+		const raw = localStorage.getItem(FACE_KEY);
+		if (raw === null) return null;
+		const parsed = Number(raw);
+		return FACE_OPTIONS.find((option) => option === parsed) ?? null;
+	} catch {
+		return null;
+	}
+}
+
+export function saveFaceMinutes(faceMinutes: FaceMinutes): void {
+	try {
+		localStorage.setItem(FACE_KEY, String(faceMinutes));
+	} catch {
+		// Preference only; losing it must not break the timer.
 	}
 }

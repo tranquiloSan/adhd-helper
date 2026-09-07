@@ -3,7 +3,8 @@
 	import { Alarm } from '$lib/alarm';
 	import Dial from '$lib/Dial.svelte';
 	import { formatApproximate, formatDuration } from '$lib/format';
-	import { loadSnapshot, saveSnapshot } from '$lib/persistence';
+	import { FACE_OPTIONS, type FaceMinutes } from '$lib/dial-geometry';
+	import { loadFaceMinutes, loadSnapshot, saveFaceMinutes, saveSnapshot } from '$lib/persistence';
 	import { PRESET_MINUTES, Timer } from '$lib/timer.svelte';
 
 	const timer = new Timer();
@@ -11,9 +12,14 @@
 
 	// Restored during component init rather than in an effect, so the persisting
 	// effect below cannot write the default state over the stored one first.
+	let faceMinutes = $state<FaceMinutes>(30);
+
 	if (browser) {
 		const snapshot = loadSnapshot();
 		if (snapshot !== null) timer.restore(snapshot);
+
+		const storedFace = loadFaceMinutes();
+		if (storedFace !== null) faceMinutes = storedFace;
 	}
 
 	let customMinutes = $state('');
@@ -66,6 +72,10 @@
 
 	$effect(() => {
 		saveSnapshot(timer.toSnapshot());
+	});
+
+	$effect(() => {
+		saveFaceMinutes(faceMinutes);
 	});
 
 	// Cleanup runs when the status changes away from finished, which is what
@@ -126,6 +136,13 @@
 		timer.setDurationMs(minutes * 60_000);
 	}
 
+	function setFace(minutes: FaceMinutes) {
+		faceMinutes = minutes;
+		// A duration longer than the new face could not be dragged back down, so
+		// bring it inside the range.
+		if (timer.durationMs > minutes * 60_000) setMinutes(minutes);
+	}
+
 	const isPreset = (minutes: number) => timer.durationMs === minutes * 60_000;
 
 	const buttonLabel = $derived(
@@ -153,6 +170,7 @@
 	<Dial
 		remainingMs={timer.remainingMs}
 		durationMs={timer.durationMs}
+		{faceMinutes}
 		finished={timer.status === 'finished'}
 		interactive={editable}
 		onSetMinutes={setMinutes}
@@ -164,6 +182,24 @@
 	</div>
 
 	<div class="flex flex-col items-center gap-5">
+		<div class="flex items-center gap-2 text-xs text-neutral-500">
+			<span>Dial</span>
+			{#each FACE_OPTIONS as option (option)}
+				<button
+					type="button"
+					onclick={() => setFace(option)}
+					disabled={!editable}
+					aria-pressed={faceMinutes === option}
+					class="rounded-full border px-3 py-1 transition disabled:opacity-40
+						{faceMinutes === option
+						? 'border-neutral-400 text-neutral-200'
+						: 'border-neutral-800 text-neutral-500 hover:border-neutral-600'}"
+				>
+					{option} min
+				</button>
+			{/each}
+		</div>
+
 		<div class="flex flex-wrap justify-center gap-2">
 			{#each PRESET_MINUTES as minutes (minutes)}
 				<button

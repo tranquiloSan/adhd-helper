@@ -56,3 +56,62 @@ export function minutesFromPoint(
 	const minutes = Math.round((angle / (2 * Math.PI)) * maxMinutes);
 	return minutes === 0 ? maxMinutes : minutes;
 }
+
+/** The dial's minute range. Drag cannot reach past it. */
+export const FACE_OPTIONS = [30, 60] as const;
+export type FaceMinutes = (typeof FACE_OPTIONS)[number];
+
+export type FaceMark = { minutes: number; degrees: number; major: boolean };
+export type FaceNumber = { minutes: number; degrees: number };
+
+/** Numbers are printed every five minutes, whatever the range. */
+const NUMBER_STEP = 5;
+
+/**
+ * Marks and numbers for a face of the given range: one mark per minute, every
+ * fifth longer, and a number every five minutes.
+ *
+ * Per-minute detail only stays legible up to an hour. A longer duration
+ * rescales the face to fit, and then gets twelve plain marks and no numbers,
+ * because minute marks would be too dense and the numbers would not be round.
+ */
+export function faceLayout(faceMinutes: number): { marks: FaceMark[]; numbers: FaceNumber[] } {
+	const degreesPerMinute = 360 / faceMinutes;
+
+	if (faceMinutes > 60) {
+		return {
+			marks: Array.from({ length: 12 }, (_, i) => ({
+				minutes: ((i + 1) / 12) * faceMinutes,
+				degrees: ((i + 1) / 12) * 360,
+				major: true
+			})),
+			numbers: []
+		};
+	}
+
+	const marks = Array.from({ length: faceMinutes }, (_, i) => {
+		const minutes = i + 1;
+		return {
+			minutes,
+			degrees: minutes * degreesPerMinute,
+			major: minutes % NUMBER_STEP === 0
+		};
+	});
+
+	const numbers = Array.from({ length: Math.floor(faceMinutes / NUMBER_STEP) }, (_, i) => {
+		const minutes = (i + 1) * NUMBER_STEP;
+		return { minutes, degrees: minutes * degreesPerMinute };
+	});
+
+	return { marks, numbers };
+}
+
+/** A point on the dial at `degrees` clockwise from 12 o'clock. */
+export function polarPoint(
+	degrees: number,
+	radius: number,
+	centre: number = DIAL_CENTRE
+): { x: number; y: number } {
+	const angle = (degrees / 180) * Math.PI;
+	return { x: centre + radius * Math.sin(angle), y: centre - radius * Math.cos(angle) };
+}

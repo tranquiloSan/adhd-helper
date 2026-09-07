@@ -1,7 +1,7 @@
 export type TimerStatus = 'idle' | 'running' | 'paused' | 'finished';
 
 /** Durations offered as one-click presets, in minutes. */
-export const PRESET_MINUTES = [5, 10, 15, 25, 45, 60] as const;
+export const PRESET_MINUTES = [5, 10, 25] as const;
 
 export const DEFAULT_DURATION_MS = 25 * 60_000;
 
