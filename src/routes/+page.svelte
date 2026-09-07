@@ -37,10 +37,21 @@
 	/** The duration is locked once started; only a reset unlocks it. */
 	const editable = $derived(timer.status === 'idle');
 
+	/**
+	 * A face stretched past the range on offer, by a length that was typed.
+	 *
+	 * Not draggable while it lasts. A drag maps the whole circle onto the face,
+	 * so dragging a stretched one would pull the duration back inside the chosen
+	 * range and collapse the face on the first touch - and the face would then be
+	 * rescaling under the pointer mid-drag, which is exactly what a fixed face is
+	 * for avoiding.
+	 */
+	const scaled = $derived(face > faceMinutes);
+
 	const caption = $derived.by(() => {
 		switch (timer.status) {
 			case 'idle':
-				return 'Drag the dial or pick a length';
+				return scaled ? 'Pick a length, or type another' : 'Drag the dial or pick a length';
 			case 'running':
 				return 'Running';
 			case 'paused':
@@ -177,10 +188,10 @@
 	<Dial
 		fraction={filled}
 		faceMinutes={face}
-		dragMaxMinutes={faceMinutes}
+		dragMaxMinutes={face}
 		valueMinutes={Math.round(timer.durationMs / 60_000)}
 		finished={timer.status === 'finished'}
-		interactive={editable}
+		interactive={editable && !scaled}
 		onSetMinutes={setMinutes}
 	/>
 
@@ -190,22 +201,32 @@
 	</div>
 
 	<div class="flex flex-col items-center gap-5">
-		<div class="flex items-center gap-2 text-xs text-neutral-500">
+		<div class="flex flex-wrap items-center justify-center gap-2 text-xs text-neutral-500">
 			<span>Dial</span>
-			{#each FACE_OPTIONS as option (option)}
-				<button
-					type="button"
-					onclick={() => setFace(option)}
-					disabled={!editable}
-					aria-pressed={faceMinutes === option}
-					class="rounded-full border px-3 py-1 transition disabled:opacity-40
-						{faceMinutes === option
-						? 'border-neutral-400 text-neutral-200'
-						: 'border-neutral-800 text-neutral-500 hover:border-neutral-600'}"
+			{#if scaled}
+				<!-- The face is reporting the typed length, not offering a choice. -->
+				<span
+					class="rounded-full border border-neutral-700 px-3 py-1 text-neutral-300 tabular-nums"
 				>
-					{option} min
-				</button>
-			{/each}
+					{face} min
+				</span>
+				<span>- following the length you typed</span>
+			{:else}
+				{#each FACE_OPTIONS as option (option)}
+					<button
+						type="button"
+						onclick={() => setFace(option)}
+						disabled={!editable}
+						aria-pressed={faceMinutes === option}
+						class="rounded-full border px-3 py-1 transition disabled:opacity-40
+							{faceMinutes === option
+							? 'border-neutral-400 text-neutral-200'
+							: 'border-neutral-800 text-neutral-500 hover:border-neutral-600'}"
+					>
+						{option} min
+					</button>
+				{/each}
+			{/if}
 		</div>
 
 		<div class="flex flex-wrap justify-center gap-2">
@@ -263,8 +284,10 @@
 			{/if}
 		</div>
 
-		<p class="text-xs text-neutral-500">
-			Space starts and pauses. The length is locked once running - reset to change it.
+		<p class="max-w-prose text-center text-xs leading-relaxed text-neutral-500">
+			Space starts and pauses. The length is locked once running - reset to change it. Type a length
+			longer than the dial offers and the face stretches to fit it, in twelve marks rather than
+			sixty; it then shows what you typed instead of being dragged.
 		</p>
 	</div>
 

@@ -62,30 +62,43 @@ export const FACE_OPTIONS = [30, 60] as const;
 export type FaceMinutes = (typeof FACE_OPTIONS)[number];
 
 export type FaceMark = { minutes: number; degrees: number; major: boolean };
-export type FaceNumber = { minutes: number; degrees: number };
+export type FaceNumber = { minutes: number; degrees: number; label: string };
 
 /** Numbers are printed every five minutes, whatever the range. */
 const NUMBER_STEP = 5;
+
+/**
+ * A face number as it is printed.
+ *
+ * A rescaled face divides into twelve whatever the length, so the numbers only
+ * come out whole when the length divides by twelve. One decimal place is the
+ * limit: "7.5" reads as a time, and "8.3333" reads as a bug.
+ */
+function faceLabel(minutes: number): string {
+	return String(Math.round(minutes * 10) / 10);
+}
 
 /**
  * Marks and numbers for a face of the given range: one mark per minute, every
  * fifth longer, and a number every five minutes.
  *
  * Per-minute detail only stays legible up to an hour. A longer duration
- * rescales the face to fit, and then gets twelve plain marks and no numbers,
- * because minute marks would be too dense and the numbers would not be round.
+ * rescales the face to fit and gets twelve marks instead, since minute marks
+ * would be too dense to read - but they are still numbered, because an
+ * unlabelled disc says nothing about how long the length actually is.
  */
 export function faceLayout(faceMinutes: number): { marks: FaceMark[]; numbers: FaceNumber[] } {
 	const degreesPerMinute = 360 / faceMinutes;
 
 	if (faceMinutes > 60) {
+		const twelfths = Array.from({ length: 12 }, (_, i) => ({
+			minutes: ((i + 1) / 12) * faceMinutes,
+			degrees: ((i + 1) / 12) * 360
+		}));
+
 		return {
-			marks: Array.from({ length: 12 }, (_, i) => ({
-				minutes: ((i + 1) / 12) * faceMinutes,
-				degrees: ((i + 1) / 12) * 360,
-				major: true
-			})),
-			numbers: []
+			marks: twelfths.map((twelfth) => ({ ...twelfth, major: true })),
+			numbers: twelfths.map((twelfth) => ({ ...twelfth, label: faceLabel(twelfth.minutes) }))
 		};
 	}
 
@@ -100,7 +113,7 @@ export function faceLayout(faceMinutes: number): { marks: FaceMark[]; numbers: F
 
 	const numbers = Array.from({ length: Math.floor(faceMinutes / NUMBER_STEP) }, (_, i) => {
 		const minutes = (i + 1) * NUMBER_STEP;
-		return { minutes, degrees: minutes * degreesPerMinute };
+		return { minutes, degrees: minutes * degreesPerMinute, label: faceLabel(minutes) };
 	});
 
 	return { marks, numbers };

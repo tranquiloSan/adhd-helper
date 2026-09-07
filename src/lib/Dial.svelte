@@ -5,8 +5,7 @@
 		faceLayout,
 		minutesFromPoint,
 		polarPoint,
-		wedgePath,
-		type FaceMinutes
+		wedgePath
 	} from '$lib/dial-geometry';
 
 	type Props = {
@@ -145,7 +144,7 @@
 	<g fill={INK} font-size="13" font-weight="600" text-anchor="middle" opacity="0.85">
 		{#each layout.numbers as number (number.minutes)}
 			{@const point = polarPoint(number.degrees, LABEL_RADIUS, CENTRE)}
-			<text x={point.x} y={point.y} dominant-baseline="middle">{number.minutes}</text>
+			<text x={point.x} y={point.y} dominant-baseline="middle">{number.label}</text>
 		{/each}
 	</g>
 
