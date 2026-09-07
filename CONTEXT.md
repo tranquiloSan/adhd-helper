@@ -10,8 +10,24 @@ A single self-contained utility the site hosts.
 _Avoid_: widget, app, feature
 
 **Timer**:
-The countdown. Exactly one exists, and it is idle, running, paused or finished.
-_Avoid_: session, focus block, countdown
+The task countdown: a length in minutes, counting down to an alarm that repeats
+until acknowledged.
+_Avoid_: session, focus block, pomodoro
+
+**Elapsed**:
+The count-up display. Has no target and never sounds, so it can report a long
+stretch without breaking one.
+_Avoid_: stopwatch, tracker
+
+**Day**:
+The countdown to an end time you name, running alongside the timer. Does nothing
+until started, so there are no working hours to store.
+_Avoid_: workday, schedule, shift
+
+**Notes**:
+The single box for a thought that would otherwise be lost. Working-memory
+offload, and pointedly not somewhere work is tracked.
+_Avoid_: todo, tasks, backlog
 
 **Dial**:
 The circular face whose filled wedge shrinks as the remaining time falls, and

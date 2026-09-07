@@ -1,21 +1,10 @@
 <script lang="ts">
-	import { browser } from '$app/environment';
 	import { formatAge } from '$lib/format';
 	import { notes } from '$lib/notes.svelte';
-	import { loadNotes, saveNotes } from '$lib/persistence';
-
-	if (browser) {
-		const stored = loadNotes();
-		if (stored !== null) notes.restore(stored);
-	}
 
 	let now = $state(Date.now());
 
 	const age = $derived(notes.updatedAt === null ? null : formatAge(now - notes.updatedAt));
-
-	$effect(() => {
-		saveNotes(notes.toSnapshot());
-	});
 
 	// Age changes by the hour, so a slow tick and a nudge on refocus is plenty.
 	$effect(() => {

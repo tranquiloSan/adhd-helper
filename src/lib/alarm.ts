@@ -34,11 +34,18 @@ export class Alarm {
 		return this.#repeatId !== null;
 	}
 
+	/** Sounds and notifies exactly once, with no repeat. End of day is when you
+	 *  least want a dismiss-me alarm sitting on top of a thought. */
+	once(message: string, title: string): void {
+		this.#sound();
+		this.#notify(message, title);
+	}
+
 	start(message: string): void {
 		if (this.#repeatId !== null) return;
 
 		this.#sound();
-		this.#notify(message);
+		this.#notify(message, 'Time is up');
 		this.#repeatId = setInterval(() => this.#sound(), REPEAT_MS);
 	}
 
@@ -51,12 +58,12 @@ export class Alarm {
 		this.#notification = null;
 	}
 
-	#notify(message: string): void {
+	#notify(message: string, title: string): void {
 		if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
 		try {
 			// A tag means a repeat replaces the previous notification instead of
 			// stacking up a column of them.
-			this.#notification = new Notification('Time is up', {
+			this.#notification = new Notification(title, {
 				body: message,
 				tag: 'adhd-helper:timer',
 				requireInteraction: true

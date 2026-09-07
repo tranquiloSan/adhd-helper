@@ -3,6 +3,12 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
+	import { browser } from '$app/environment';
+	import { Alarm } from '$lib/alarm';
+	import { day } from '$lib/day.svelte';
+	import { formatDuration } from '$lib/format';
+	import { notes } from '$lib/notes.svelte';
+	import { loadDay, loadNotes, saveDay, saveNotes } from '$lib/persistence';
 
 	let { children } = $props();
 
@@ -12,6 +18,52 @@
 		{ href: '/day', label: 'Day' },
 		{ href: '/notes', label: 'Notes' }
 	] as const;
+
+	const alarm = new Alarm();
+
+	// The day countdown and the dump are hydrated and persisted here rather than
+	// on their own pages: the day has to keep counting while you are looking at
+	// another tool, and the end-of-day nudge needs to know whether the dump is
+	// empty from wherever you happen to be.
+	if (browser) {
+		const storedDay = loadDay();
+		if (storedDay !== null) day.restore(storedDay);
+
+		const storedNotes = loadNotes();
+		if (storedNotes !== null) notes.restore(storedNotes);
+	}
+
+	$effect(() => {
+		if (day.status !== 'running') return;
+		const id = setInterval(() => day.sync(), 1000);
+		return () => clearInterval(id);
+	});
+
+	$effect(() => {
+		const resync = () => day.sync();
+		document.addEventListener('visibilitychange', resync);
+		window.addEventListener('focus', resync);
+		return () => {
+			document.removeEventListener('visibilitychange', resync);
+			window.removeEventListener('focus', resync);
+		};
+	});
+
+	// One notice, then quiet. Acknowledging is persisted, so a day that ended
+	// while the tab was shut is announced when you return - but only once.
+	$effect(() => {
+		if (!day.needsAnnouncement) return;
+		alarm.once('Your day is done.', 'Day over');
+		day.acknowledge();
+	});
+
+	$effect(() => {
+		saveDay(day.toSnapshot());
+	});
+
+	$effect(() => {
+		saveNotes(notes.toSnapshot());
+	});
 </script>
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
@@ -30,6 +82,26 @@
 			</a>
 		{/each}
 	</nav>
+
+	{#if day.status === 'running'}
+		<p class="pb-1 text-center text-xs text-neutral-500" aria-live="polite">
+			{formatDuration(day.remainingMs)} left today
+		</p>
+	{:else if day.status === 'over'}
+		<div class="flex flex-wrap items-center justify-center gap-2 pb-1 text-xs text-neutral-400">
+			<span aria-live="polite">Day over.</span>
+			{#if !notes.isEmpty}
+				<span>Move anything worth keeping out of your notes, then</span>
+				<button
+					type="button"
+					onclick={() => notes.clear()}
+					class="rounded-full border border-neutral-700 px-3 py-0.5 transition hover:border-neutral-500"
+				>
+					clear them
+				</button>
+			{/if}
+		</div>
+	{/if}
 
 	{@render children()}
 

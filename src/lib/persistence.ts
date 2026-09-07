@@ -1,4 +1,5 @@
 import { FACE_OPTIONS, type FaceMinutes } from './dial-geometry';
+import type { DaySnapshot, DayStatus } from './day.svelte';
 import type { ElapsedSnapshot, ElapsedStatus } from './elapsed.svelte';
 import type { NotesSnapshot } from './notes.svelte';
 import type { TimerSnapshot, TimerStatus } from './timer.svelte';
@@ -8,7 +9,9 @@ const KEYS = {
 	face: 'adhd-helper:face',
 	elapsed: 'adhd-helper:elapsed',
 	threshold: 'adhd-helper:elapsed-threshold',
-	notes: 'adhd-helper:notes'
+	notes: 'adhd-helper:notes',
+	day: 'adhd-helper:day',
+	endTime: 'adhd-helper:day-end-time'
 } as const;
 
 /**
@@ -108,4 +111,34 @@ export function loadNotes(): NotesSnapshot | null {
 
 export function saveNotes(snapshot: NotesSnapshot): void {
 	write(KEYS.notes, snapshot);
+}
+
+const DAY_STATUSES: DayStatus[] = ['idle', 'running', 'over'];
+
+export function loadDay(): DaySnapshot | null {
+	return read(KEYS.day, (value) => {
+		if (typeof value !== 'object' || value === null) return null;
+		const v = value as Record<string, unknown>;
+		const valid =
+			isNullableNumber(v.startedAt) &&
+			isNullableNumber(v.endsAt) &&
+			typeof v.announced === 'boolean' &&
+			DAY_STATUSES.includes(v.status as DayStatus);
+		return valid ? (v as unknown as DaySnapshot) : null;
+	});
+}
+
+export function saveDay(snapshot: DaySnapshot): void {
+	write(KEYS.day, snapshot);
+}
+
+/** Last end time used, so tomorrow's prefill is already right. */
+export function loadEndTime(): string | null {
+	return read(KEYS.endTime, (value) =>
+		typeof value === 'string' && /^\d{2}:\d{2}$/.test(value) ? value : null
+	);
+}
+
+export function saveEndTime(value: string): void {
+	write(KEYS.endTime, value);
 }
