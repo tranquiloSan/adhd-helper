@@ -30,18 +30,30 @@ export function fractionForTime(from: number, timestamp: number): number {
 }
 
 /**
- * The time a fraction along the track points at, snapped.
+ * The time a fraction along the track points at, snapped to the clock.
+ *
+ * Snapped absolutely rather than relative to the track's start, so the marks
+ * are real quarter hours - 08:00, 10:30 - and not whatever offset now happens
+ * to carry. Every timezone offset in use is a whole number of quarter hours, so
+ * a timestamp on a `SNAP_MS` boundary is on one locally too, seconds included.
  *
  * Never the track's own start: a day of no length is not a day, and the
  * countdown refuses one anyway.
  */
 export function timeForFraction(from: number, fraction: number): number {
-	const offset = clamp01(fraction) * DRAG_SPAN_MS;
-	const snapped = Math.round(offset / SNAP_MS) * SNAP_MS;
-	return from + Math.max(SNAP_MS, snapped);
+	const target = from + clamp01(fraction) * DRAG_SPAN_MS;
+	const snapped = Math.round(target / SNAP_MS) * SNAP_MS;
+
+	// The nearest mark can fall behind the start, and the last one inside the
+	// reach can fall beyond it. Both ends stay on the grid.
+	if (snapped <= from) return Math.floor(from / SNAP_MS) * SNAP_MS + SNAP_MS;
+	const reach = Math.floor((from + DRAG_SPAN_MS) / SNAP_MS) * SNAP_MS;
+	return Math.min(snapped, reach);
 }
 
-/** A whole number of snaps along, for the arrow keys. */
+/** A whole number of snaps along, for the arrow keys. Pulls a time typed off
+ *  the grid onto it, since it snaps like any other move. */
 export function nudgeTime(from: number, timestamp: number, steps: number): number {
-	return timeForFraction(from, fractionForTime(from, timestamp + steps * SNAP_MS));
+	const target = timestamp + steps * SNAP_MS;
+	return timeForFraction(from, (target - from) / DRAG_SPAN_MS);
 }
