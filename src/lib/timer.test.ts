@@ -52,6 +52,15 @@ describe('running', () => {
 		expect(timer.progress).toBe(1);
 	});
 
+	it('ignores a duration change while paused, since only a reset unlocks it', () => {
+		const timer = startedTimer(10 * MINUTE);
+		timer.pause(T0 + 1 * MINUTE);
+		timer.setDurationMs(30 * MINUTE, T0 + 1 * MINUTE);
+
+		expect(timer.durationMs).toBe(10 * MINUTE);
+		expect(timer.remainingMs).toBe(9 * MINUTE);
+	});
+
 	it('ignores a duration change mid-run', () => {
 		const timer = startedTimer(10 * MINUTE);
 		timer.setDurationMs(30 * MINUTE, T0);

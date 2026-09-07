@@ -1,7 +1,7 @@
 export type TimerStatus = 'idle' | 'running' | 'paused' | 'finished';
 
 /** Durations offered as one-click presets, in minutes. */
-export const PRESET_MINUTES = [15, 25, 45, 60] as const;
+export const PRESET_MINUTES = [5, 10, 15, 25, 45, 60] as const;
 
 export const DEFAULT_DURATION_MS = 25 * 60_000;
 
@@ -72,10 +72,13 @@ export class Timer {
 		}
 	}
 
-	/** Ignored while running: changing the duration mid-run would leave `progress`
-	 *  measured against a length the timer never had. */
+	/**
+	 * Only an idle timer's duration can be changed; a started one is locked until
+	 * reset. The friction is the point — being able to nudge a running timer
+	 * onwards is how overrunning stops feeling like a decision.
+	 */
 	setDurationMs(ms: number, now: number = Date.now()): void {
-		if (this.status === 'running') return;
+		if (this.status !== 'idle') return;
 		this.durationMs = Math.max(0, Math.round(ms));
 		this.reset(now);
 	}

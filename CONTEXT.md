@@ -14,5 +14,6 @@ The countdown. Exactly one exists, and it is idle, running, paused or finished.
 _Avoid_: session, focus block, countdown
 
 **Dial**:
-The circular visual whose filled arc shrinks as the remaining time falls.
+The circular face whose filled wedge shrinks as the remaining time falls, and
+which is dragged to set the length. Both the display and the main control.
 _Avoid_: disc, pie, wheel, gauge
