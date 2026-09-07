@@ -1,7 +1,8 @@
 # adhd-helper
 
 A personal website hosting small tools for managing ADHD (inattentive type).
-The tools are self-contained and deliberately few.
+The tools are self-contained and kept few: another is added when something is
+actually needed, not to round the set out.
 
 ## Language
 

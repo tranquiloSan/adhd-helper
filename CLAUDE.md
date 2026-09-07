@@ -2,7 +2,8 @@
 
 A website hosting a collection of small tools for managing ADHD (inattentive
 type) — currently a timer, an elapsed count, a day countdown and a notes box.
-The specific tool set is deliberately open-ended and expected to grow.
+The set is kept few deliberately, and grows when something is actually needed
+rather than to round it out.
 
 ## Agent skills
 
