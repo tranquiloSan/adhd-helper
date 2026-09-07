@@ -32,6 +32,18 @@ describe('running', () => {
 		expect(timer.remainingMs).toBe(6 * MINUTE);
 	});
 
+	it('reports how much of the duration has been spent', () => {
+		const timer = startedTimer(10 * MINUTE);
+		timer.sync(T0 + 4 * MINUTE);
+		expect(timer.elapsedMs).toBe(4 * MINUTE);
+	});
+
+	it('counts the whole duration as spent once finished', () => {
+		const timer = startedTimer(5 * MINUTE);
+		timer.sync(T0 + 5 * MINUTE);
+		expect(timer.elapsedMs).toBe(5 * MINUTE);
+	});
+
 	it('reports progress as the fraction used up', () => {
 		const timer = startedTimer(10 * MINUTE);
 		timer.sync(T0 + 2.5 * MINUTE);

@@ -26,6 +26,7 @@
 	let customMinutes = $state('');
 
 	const clock = $derived(formatDuration(timer.remainingMs));
+	const spent = $derived(formatDuration(timer.elapsedMs));
 
 	/**
 	 * A real Time Timer has a fixed face: on a 30-minute face, 25 minutes covers
@@ -186,7 +187,11 @@
 
 	<div class="grid place-items-center gap-1">
 		<span class="text-7xl font-semibold tracking-tight text-neutral-50 tabular-nums">{clock}</span>
-		<span class="text-sm text-neutral-400" aria-live="polite">{caption}</span>
+		<span class="text-sm text-neutral-400" aria-live="polite">
+			{caption}{#if timer.elapsedMs >= 1000}<span class="text-neutral-500">
+					&middot; {spent} gone</span
+				>{/if}
+		</span>
 	</div>
 
 	<div class="flex flex-col items-center gap-5">

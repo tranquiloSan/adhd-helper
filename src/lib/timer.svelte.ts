@@ -49,11 +49,15 @@ export class Timer {
 		}
 	}
 
+	/** How much of the duration has been spent. */
+	get elapsedMs(): number {
+		return Math.max(0, this.durationMs - this.remainingMs);
+	}
+
 	/** Fraction of the duration used up: 0 at the start, 1 when finished. */
 	get progress(): number {
 		if (this.durationMs <= 0) return 1;
-		const elapsed = this.durationMs - this.remainingMs;
-		return Math.min(1, Math.max(0, elapsed / this.durationMs));
+		return Math.min(1, Math.max(0, this.elapsedMs / this.durationMs));
 	}
 
 	/** How long ago a finished timer ran out. Non-zero mainly when it expired
