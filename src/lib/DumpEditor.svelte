@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { highlight, type TokenKind } from '$lib/markdown-highlight';
+	import { TOKEN_CLASSES, highlight } from '$lib/markdown-highlight';
 	import { notes } from '$lib/notes.svelte';
 
 	type Props = {
@@ -14,23 +14,6 @@
 	let mirror: HTMLDivElement | null = null;
 
 	const tokens = $derived(highlight(notes.text));
-
-	/**
-	 * Styling may only use properties that leave glyph positions alone - colour,
-	 * stroke, underline, background. Weight and size change advance widths, which
-	 * would slide the painted text out from under the caret.
-	 */
-	const CLASSES: Record<TokenKind, string> = {
-		text: '',
-		marker: 'text-neutral-600',
-		heading: 'text-neutral-50 [-webkit-text-stroke:0.4px_currentColor]',
-		strong: 'text-neutral-100 [-webkit-text-stroke:0.35px_currentColor]',
-		emphasis: 'text-amber-200/90',
-		code: 'rounded bg-neutral-800 text-teal-300',
-		quote: 'text-neutral-400',
-		link: 'text-sky-300 underline decoration-sky-300/40',
-		url: 'text-neutral-500'
-	};
 
 	$effect(() => {
 		if (autofocus) textarea?.focus();
@@ -55,7 +38,7 @@
 		aria-hidden="true"
 		class="pointer-events-none absolute inset-0 overflow-hidden p-3 font-sans text-base leading-relaxed break-words whitespace-pre-wrap"
 	>
-		{#each tokens as token, index (index)}<span class={CLASSES[token.kind]}>{token.text}</span
+		{#each tokens as token, index (index)}<span class={TOKEN_CLASSES[token.kind]}>{token.text}</span
 			>{/each}<br />
 	</div>
 

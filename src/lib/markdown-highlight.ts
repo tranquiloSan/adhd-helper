@@ -13,6 +13,29 @@ export type TokenKind =
 export type Token = { text: string; kind: TokenKind };
 
 /**
+ * How each kind is painted.
+ *
+ * Lives here rather than in the editor so that anything showing what the
+ * editor does - the hint on the notes page - paints it identically.
+ *
+ * Only properties that leave glyph positions alone: colour, stroke, underline,
+ * background. The editor paints these behind a transparent textarea, and weight
+ * or size would change advance widths and slide the text out from under the
+ * caret.
+ */
+export const TOKEN_CLASSES: Record<TokenKind, string> = {
+	text: '',
+	marker: 'text-neutral-600',
+	heading: 'text-neutral-50 [-webkit-text-stroke:0.4px_currentColor]',
+	strong: 'text-neutral-100 [-webkit-text-stroke:0.35px_currentColor]',
+	emphasis: 'text-amber-200/90',
+	code: 'rounded bg-neutral-800 text-teal-300',
+	quote: 'text-neutral-400',
+	link: 'text-sky-300 underline decoration-sky-300/40',
+	url: 'text-neutral-500'
+};
+
+/**
  * Inline constructs, matched in one pass so earlier ones win: code spans
  * protect their contents, and `**` is tried before `*`.
  */
