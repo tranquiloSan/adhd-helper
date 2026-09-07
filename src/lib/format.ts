@@ -42,3 +42,38 @@ export function formatTimeOfDay(timestamp: number): string {
 	const pad = (n: number) => String(n).padStart(2, '0');
 	return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
+
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** Whole days apart by the calendar rather than by elapsed time, so 23:50 and
+ *  00:10 are a day apart even though twenty minutes separate them. */
+function calendarDaysApart(from: number, to: number): number {
+	const a = new Date(from);
+	const b = new Date(to);
+	a.setHours(0, 0, 0, 0);
+	b.setHours(0, 0, 0, 0);
+	return Math.round((b.getTime() - a.getTime()) / 86_400_000);
+}
+
+/**
+ * A clock time, qualified with the day whenever it is not today.
+ *
+ * A bare time is a lie outside today: "18:00" beside "15:00:00 elapsed" reads
+ * as this evening. Used where a time can legitimately belong to another day -
+ * a stretch that ran overnight, or a day that ends after midnight - while
+ * `formatTimeOfDay` stays bare for times known to be inside the span.
+ */
+export function formatTimeWithDay(timestamp: number, now: number = Date.now()): string {
+	const time = formatTimeOfDay(timestamp);
+	const days = calendarDaysApart(now, timestamp);
+
+	if (days === 0) return time;
+	if (days === -1) return `${time} yesterday`;
+	if (days === 1) return `${time} tomorrow`;
+
+	const date = new Date(timestamp);
+	// Beyond a week the weekday name repeats, so it stops identifying a day.
+	if (Math.abs(days) < 7) return `${WEEKDAYS[date.getDay()]} ${time}`;
+	return `${time} on ${date.getDate()} ${MONTHS[date.getMonth()]}`;
+}

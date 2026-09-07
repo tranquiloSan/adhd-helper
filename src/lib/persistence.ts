@@ -84,7 +84,21 @@ export function loadElapsed(): ElapsedSnapshot | null {
 			isNullableNumber(v.startedAt) &&
 			isFiniteNumber(v.accumulatedMs) &&
 			ELAPSED_STATUSES.includes(v.status as ElapsedStatus);
-		return valid ? (v as unknown as ElapsedSnapshot) : null;
+		if (!valid) return null;
+
+		// The break fields arrived after the first version shipped, so they are
+		// defaulted rather than required. Requiring them would reject every
+		// snapshot already in a browser and drop a stretch that is still
+		// running - the one thing a reload is not allowed to do.
+		return {
+			status: v.status as ElapsedStatus,
+			startedAt: v.startedAt as number | null,
+			accumulatedMs: v.accumulatedMs as number,
+			firstStartedAt: isNullableNumber(v.firstStartedAt) ? v.firstStartedAt : null,
+			pausedAt: isNullableNumber(v.pausedAt) ? v.pausedAt : null,
+			breakMs: isFiniteNumber(v.breakMs) ? v.breakMs : 0,
+			breakCount: isFiniteNumber(v.breakCount) ? v.breakCount : 0
+		};
 	});
 }
 

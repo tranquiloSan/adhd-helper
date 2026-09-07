@@ -2,7 +2,7 @@
 	import { browser } from '$app/environment';
 	import Dial from '$lib/Dial.svelte';
 	import { DEFAULT_THRESHOLD_MINUTES, elapsed } from '$lib/elapsed.svelte';
-	import { formatDuration } from '$lib/format';
+	import { formatApproximate, formatDuration, formatTimeWithDay } from '$lib/format';
 	import { loadThresholdMinutes, saveThresholdMinutes } from '$lib/persistence';
 
 	/** The elapsed dial always uses an hour face and laps past it. */
@@ -17,6 +17,43 @@
 
 	const elapsedMinutes = $derived(elapsed.elapsedMs / 60_000);
 	const clock = $derived(formatDuration(elapsed.elapsedMs));
+
+	// Only the day qualifier on the start time depends on this, and that changes
+	// at midnight, so a minute is plenty. The layout drives the count itself.
+	let now = $state(Date.now());
+
+	$effect(() => {
+		const tick = () => (now = Date.now());
+		const id = setInterval(tick, 60_000);
+		window.addEventListener('focus', tick);
+		return () => {
+			clearInterval(id);
+			window.removeEventListener('focus', tick);
+		};
+	});
+
+	/**
+	 * The account of the stretch, which is what makes the start time honest:
+	 * start plus elapsed plus breaks lands on the wall clock, and without the
+	 * breaks the first two stop agreeing with it the moment you pause.
+	 *
+	 * A stretch restored from a snapshot written before breaks existed has no
+	 * start time, so each part stands on its own.
+	 */
+	const account = $derived.by(() => {
+		const parts: string[] = [];
+
+		if (elapsed.stretchStartedAt !== null) {
+			parts.push(`started ${formatTimeWithDay(elapsed.stretchStartedAt, now)}`);
+		}
+		// A count of no breaks is noise, not information.
+		if (elapsed.breakCount > 0) {
+			const breaks = elapsed.breakCount === 1 ? '1 break' : `${elapsed.breakCount} breaks`;
+			parts.push(`${breaks}, ${formatApproximate(elapsed.breakMs)}`);
+		}
+
+		return parts.join(' - ');
+	});
 
 	/** Whole hours completed. The wedge restarts each hour, so this is what
 	 *  distinguishes one hour from three. */
@@ -91,6 +128,9 @@
 	<div class="grid place-items-center gap-1">
 		<span class="text-7xl font-semibold tracking-tight text-neutral-50 tabular-nums">{clock}</span>
 		<span class="text-sm text-neutral-400" aria-live="polite">{caption}</span>
+		{#if account !== ''}
+			<span class="text-xs text-neutral-500">{account}</span>
+		{/if}
 	</div>
 
 	<div class="flex flex-col items-center gap-5">
@@ -133,5 +173,11 @@
 		Counts up with no target and no alarm, so it can tell you how long you have been at something
 		without breaking the focus it took to get there. The wedge fills each hour and starts again; the
 		colour warms once a stretch runs long.
+	</p>
+
+	<p class="max-w-prose text-center text-xs leading-relaxed text-neutral-500">
+		Press <kbd class="rounded border border-neutral-700 px-1">p</kbd> on any page to pause and pick up
+		again - a break is timed for you and kept out of the count, so the time above is time you were actually
+		here.
 	</p>
 </main>

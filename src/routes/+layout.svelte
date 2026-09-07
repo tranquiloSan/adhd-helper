@@ -55,8 +55,10 @@
 	});
 
 	// Drives the elapsed dial as well as the strip, so the page does not tick too.
+	// Runs while paused as well, because a break counts up when the stretch is
+	// not.
 	$effect(() => {
-		if (elapsed.status !== 'running') return;
+		if (elapsed.status === 'idle') return;
 		const id = setInterval(() => elapsed.sync(), 500);
 		return () => clearInterval(id);
 	});
@@ -107,6 +109,16 @@
 
 			if (isTypingTarget(event.target)) return;
 			if (event.metaKey || event.ctrlKey || event.altKey) return;
+
+			// Pausing has to cost nothing from wherever you are, or a break does
+			// not get recorded and the elapsed figure quietly swallows it. Does
+			// nothing when idle: starting a stretch stays deliberate.
+			if (event.key === 'p') {
+				if (elapsed.status === 'running') elapsed.pause();
+				else if (elapsed.status === 'paused') elapsed.resume();
+				return;
+			}
+
 			if (event.key !== 'n') return;
 			// Redundant on the notes page, which is the same box full size.
 			if (page.url.pathname === resolve('/notes')) return;
@@ -143,7 +155,9 @@
 		>
 			{#if elapsed.status !== 'idle'}
 				<span aria-live="polite">
-					{formatDuration(elapsed.elapsedMs)} elapsed{elapsed.status === 'paused' ? ', paused' : ''}
+					{formatDuration(elapsed.elapsedMs)} elapsed{elapsed.status === 'paused'
+						? ` - on a break ${formatDuration(elapsed.currentBreakMs)}`
+						: ''}
 				</span>
 			{/if}
 
