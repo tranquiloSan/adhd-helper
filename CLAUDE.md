@@ -1,8 +1,8 @@
 # adhd-helper
 
 A website hosting a collection of small tools for managing ADHD (inattentive
-type) — e.g. timers, a pomodoro, and whatever else proves useful. The specific
-tool set is deliberately open-ended and expected to grow.
+type) — currently a timer, an elapsed count, a day countdown and a notes box.
+The specific tool set is deliberately open-ended and expected to grow.
 
 ## Agent skills
 
