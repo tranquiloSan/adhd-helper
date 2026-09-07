@@ -1,20 +1,14 @@
 <script lang="ts">
+	import DumpEditor from '$lib/DumpEditor.svelte';
 	import { formatAge } from '$lib/format';
 	import { notes } from '$lib/notes.svelte';
 
 	type Props = { onclose: () => void };
 	let { onclose }: Props = $props();
 
-	let textarea: HTMLTextAreaElement | null = null;
 	const now = Date.now();
 
 	const age = $derived(notes.updatedAt === null ? null : formatAge(now - notes.updatedAt));
-
-	// Focused on open: the whole point is think, press, type. Anything else and
-	// the thought is gone.
-	$effect(() => {
-		textarea?.focus();
-	});
 
 	/** Only a click on the backdrop itself closes; one inside the panel must not. */
 	function onBackdropClick(event: MouseEvent) {
@@ -36,14 +30,7 @@
 		aria-modal="true"
 		aria-label="Brain dump"
 	>
-		<textarea
-			bind:this={textarea}
-			value={notes.text}
-			oninput={(event) => notes.set(event.currentTarget.value)}
-			placeholder="Whatever you would otherwise forget."
-			aria-label="Brain dump"
-			class="min-h-56 w-full resize-y rounded-xl border border-neutral-800 bg-neutral-950/60 p-3 leading-relaxed outline-none placeholder:text-neutral-600 focus-visible:border-neutral-600"
-		></textarea>
+		<DumpEditor autofocus heightClass="h-56" />
 
 		<div class="flex items-center justify-between text-xs text-neutral-500">
 			<span>

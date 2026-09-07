@@ -1,4 +1,5 @@
 <script lang="ts">
+	import DumpEditor from '$lib/DumpEditor.svelte';
 	import { formatAge } from '$lib/format';
 	import { notes } from '$lib/notes.svelte';
 
@@ -24,17 +25,7 @@
 </svelte:head>
 
 <main class="mx-auto flex w-full max-w-2xl flex-col gap-3 px-6 py-4">
-	<!-- Focused on load: capture has to take about two seconds, or the thought is
-	     already gone and you stop bothering. -->
-	<!-- svelte-ignore a11y_autofocus -->
-	<textarea
-		autofocus
-		value={notes.text}
-		oninput={(event) => notes.set(event.currentTarget.value)}
-		placeholder="Whatever you would otherwise forget."
-		aria-label="Brain dump"
-		class="min-h-[50vh] w-full resize-y rounded-2xl border border-neutral-800 bg-neutral-900/50 p-4 leading-relaxed outline-none placeholder:text-neutral-600 focus-visible:border-neutral-600"
-	></textarea>
+	<DumpEditor heightClass="h-[55vh]" />
 
 	<div class="flex items-center justify-between text-xs text-neutral-500">
 		<span aria-live="polite">
