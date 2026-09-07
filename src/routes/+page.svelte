@@ -4,23 +4,28 @@
 	import Dial from '$lib/Dial.svelte';
 	import { formatApproximate, formatDuration } from '$lib/format';
 	import { isTypingTarget } from '$lib/keyboard';
-	import { FACE_OPTIONS, type FaceMinutes } from '$lib/dial-geometry';
+	import { FACE_OPTIONS, MAX_FACE_MINUTES, faceFor, type FaceMinutes } from '$lib/dial-geometry';
 	import { loadFaceMinutes, loadSnapshot, saveFaceMinutes, saveSnapshot } from '$lib/persistence';
 	import { PRESET_MINUTES, Timer } from '$lib/timer.svelte';
 
 	const timer = new Timer();
 	const alarm = new Alarm();
 
+	const DEFAULT_FACE: FaceMinutes = 30;
+
 	// Restored during component init rather than in an effect, so the persisting
 	// effect below cannot write the default state over the stored one first.
-	let faceMinutes = $state<FaceMinutes>(30);
+	let faceMinutes = $state<FaceMinutes>(DEFAULT_FACE);
 
 	if (browser) {
 		const snapshot = loadSnapshot();
 		if (snapshot !== null) timer.restore(snapshot);
 
-		const storedFace = loadFaceMinutes();
-		if (storedFace !== null) faceMinutes = storedFace;
+		// A stored duration can be longer than the stored face, because it could
+		// be before faces grew to fit. Reconciled once here rather than derived
+		// for ever, so the face stays a fixed thing a drag cannot rescale.
+		const storedFace = loadFaceMinutes() ?? DEFAULT_FACE;
+		faceMinutes = faceFor(Math.max(storedFace, Math.ceil(timer.durationMs / 60_000)));
 	}
 
 	let customMinutes = $state('');
@@ -30,28 +35,25 @@
 	/**
 	 * A real Time Timer has a fixed face: on a 30-minute face, 25 minutes covers
 	 * 25/30 of the circle, so a given amount of red always means the same amount
-	 * of time. The face only rescales for a duration that will not fit on it.
+	 * of time.
+	 *
+	 * The face is therefore held, never derived from the duration. Deriving it
+	 * would rescale the face under the pointer mid-drag - the wedge being aimed
+	 * at would move as it was dragged - and would lose the property above, which
+	 * is the whole point of having a face.
 	 */
-	const face = $derived(Math.max(faceMinutes, Math.ceil(timer.durationMs / 60_000)));
-	const filled = $derived(timer.remainingMs / 60_000 / face);
+	const filled = $derived(timer.remainingMs / 60_000 / faceMinutes);
 	/** The duration is locked once started; only a reset unlocks it. */
 	const editable = $derived(timer.status === 'idle');
 
-	/**
-	 * A face stretched past the range on offer, by a length that was typed.
-	 *
-	 * Not draggable while it lasts. A drag maps the whole circle onto the face,
-	 * so dragging a stretched one would pull the duration back inside the chosen
-	 * range and collapse the face on the first touch - and the face would then be
-	 * rescaling under the pointer mid-drag, which is exactly what a fixed face is
-	 * for avoiding.
-	 */
-	const scaled = $derived(face > faceMinutes);
+	/** A face grown to fit a typed length, rather than one of the two offered.
+	 *  Still a face: draggable, and switchable back with the buttons. */
+	const grown = $derived(!FACE_OPTIONS.some((option) => option === faceMinutes));
 
 	const caption = $derived.by(() => {
 		switch (timer.status) {
 			case 'idle':
-				return scaled ? 'Pick a length, or type another' : 'Drag the dial or pick a length';
+				return 'Drag the dial or pick a length';
 			case 'running':
 				return 'Running';
 			case 'paused':
@@ -151,9 +153,15 @@
 	}
 
 	function applyCustomMinutes() {
-		const minutes = Number(customMinutes);
-		if (!Number.isFinite(minutes) || minutes <= 0) return;
+		const typed = Number(customMinutes);
+		if (!Number.isFinite(typed) || typed <= 0) return;
+
+		// Clamped to the longest face, so a length always has a face that fits.
+		const minutes = Math.min(typed, MAX_FACE_MINUTES);
 		timer.setDurationMs(minutes * 60_000);
+		// Grown to the next round face rather than to the length itself, so the
+		// marks stay round - and left there, so the buttons can put it back.
+		if (minutes > faceMinutes) faceMinutes = faceFor(minutes);
 	}
 
 	function setFace(minutes: FaceMinutes) {
@@ -187,11 +195,11 @@
 <main class="mx-auto flex w-full max-w-3xl flex-col items-center justify-center gap-6 px-6 py-4">
 	<Dial
 		fraction={filled}
-		faceMinutes={face}
-		dragMaxMinutes={face}
+		{faceMinutes}
+		dragMaxMinutes={faceMinutes}
 		valueMinutes={Math.round(timer.durationMs / 60_000)}
 		finished={timer.status === 'finished'}
-		interactive={editable && !scaled}
+		interactive={editable}
 		onSetMinutes={setMinutes}
 	/>
 
@@ -203,29 +211,29 @@
 	<div class="flex flex-col items-center gap-5">
 		<div class="flex flex-wrap items-center justify-center gap-2 text-xs text-neutral-500">
 			<span>Dial</span>
-			{#if scaled}
-				<!-- The face is reporting the typed length, not offering a choice. -->
-				<span
-					class="rounded-full border border-neutral-700 px-3 py-1 text-neutral-300 tabular-nums"
+			{#each FACE_OPTIONS as option (option)}
+				<button
+					type="button"
+					onclick={() => setFace(option)}
+					disabled={!editable}
+					aria-pressed={faceMinutes === option}
+					class="rounded-full border px-3 py-1 transition disabled:opacity-40
+						{faceMinutes === option
+						? 'border-neutral-400 text-neutral-200'
+						: 'border-neutral-800 text-neutral-500 hover:border-neutral-600'}"
 				>
-					{face} min
+					{option} min
+				</button>
+			{/each}
+
+			{#if grown}
+				<!-- The face in use, shown beside the two that can still be picked. -->
+				<span
+					class="rounded-full border border-neutral-400 px-3 py-1 text-neutral-200 tabular-nums"
+				>
+					{faceMinutes} min
 				</span>
-				<span>- following the length you typed</span>
-			{:else}
-				{#each FACE_OPTIONS as option (option)}
-					<button
-						type="button"
-						onclick={() => setFace(option)}
-						disabled={!editable}
-						aria-pressed={faceMinutes === option}
-						class="rounded-full border px-3 py-1 transition disabled:opacity-40
-							{faceMinutes === option
-							? 'border-neutral-400 text-neutral-200'
-							: 'border-neutral-800 text-neutral-500 hover:border-neutral-600'}"
-					>
-						{option} min
-					</button>
-				{/each}
+				<span>- rounded up to fit what you typed</span>
 			{/if}
 		</div>
 
@@ -286,8 +294,9 @@
 
 		<p class="max-w-prose text-center text-xs leading-relaxed text-neutral-500">
 			Space starts and pauses. The length is locked once running - reset to change it. Type a length
-			longer than the dial offers and the face stretches to fit it, marked at a round interval
-			instead of every minute; it then shows what you typed instead of being dragged.
+			longer than the dial holds and the face grows to the next round size that fits, marked at a
+			round interval instead of every minute. It stays there, and stays draggable, until you pick
+			one of the sizes above again.
 		</p>
 	</div>
 

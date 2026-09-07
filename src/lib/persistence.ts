@@ -1,4 +1,4 @@
-import { FACE_OPTIONS, type FaceMinutes } from './dial-geometry';
+import { FACE_LADDER, type FaceMinutes } from './dial-geometry';
 import type { DaySnapshot, DayStatus } from './day.svelte';
 import type { ElapsedSnapshot, ElapsedStatus } from './elapsed.svelte';
 import type { NotesSnapshot } from './notes.svelte';
@@ -67,9 +67,11 @@ export function saveSnapshot(snapshot: TimerSnapshot): void {
 }
 
 /** The chosen dial range is a preference, not timer state, so it is stored
- *  apart from the snapshot and survives a reset. */
+ *  apart from the snapshot and survives a reset. Validated against the whole
+ *  ladder, not just the two buttons: a face grown to fit a typed length is a
+ *  face like any other, and rejecting it would silently drop back to 30. */
 export function loadFaceMinutes(): FaceMinutes | null {
-	return read(KEYS.face, (value) => FACE_OPTIONS.find((option) => option === value) ?? null);
+	return read(KEYS.face, (value) => FACE_LADDER.find((option) => option === value) ?? null);
 }
 
 export function saveFaceMinutes(faceMinutes: FaceMinutes): void {

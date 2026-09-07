@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { DIAL_CENTRE, faceLayout, minutesFromPoint, polarPoint, wedgePath } from './dial-geometry';
+import {
+	DIAL_CENTRE,
+	FACE_LADDER,
+	MAX_FACE_MINUTES,
+	faceFor,
+	faceLayout,
+	minutesFromPoint,
+	polarPoint,
+	wedgePath
+} from './dial-geometry';
 
 const RADIUS = 100;
 const C = DIAL_CENTRE;
@@ -138,5 +147,54 @@ describe('polarPoint', () => {
 	it('runs clockwise', () => {
 		expect(polarPoint(90, 100, 150).x).toBeCloseTo(250);
 		expect(polarPoint(180, 100, 150).y).toBeCloseTo(250);
+	});
+});
+
+describe('faceFor', () => {
+	it('leaves a length that already fits', () => {
+		expect(faceFor(25)).toBe(30);
+		expect(faceFor(30)).toBe(30);
+		expect(faceFor(60)).toBe(60);
+	});
+
+	it('rounds up to the next round face rather than fitting the length exactly', () => {
+		expect(faceFor(61)).toBe(90);
+		expect(faceFor(91)).toBe(120);
+		expect(faceFor(121)).toBe(150);
+	});
+
+	it('stops at the longest face there is', () => {
+		expect(faceFor(MAX_FACE_MINUTES)).toBe(MAX_FACE_MINUTES);
+		expect(faceFor(10_000)).toBe(MAX_FACE_MINUTES);
+	});
+});
+
+/**
+ * The reason a typed length grows the face to the next rung instead of becoming
+ * a face of its own: every rung divides into round numbers, so no face the dial
+ * can actually wear has a fraction on it.
+ */
+describe('every face on the ladder', () => {
+	it('is numbered in whole minutes', () => {
+		for (const face of FACE_LADDER) {
+			for (const number of faceLayout(face).numbers) {
+				expect(Number.isInteger(number.minutes)).toBe(true);
+				expect(number.label).toBe(String(number.minutes));
+			}
+		}
+	});
+
+	it('carries its total at the top, being a multiple of its own interval', () => {
+		for (const face of FACE_LADDER) {
+			const last = faceLayout(face).numbers.at(-1);
+			expect(last?.minutes).toBe(face);
+			expect(last?.degrees).toBeCloseTo(360);
+		}
+	});
+
+	it('never crowds the rim', () => {
+		for (const face of FACE_LADDER) {
+			expect(faceLayout(face).numbers.length).toBeLessThanOrEqual(12);
+		}
 	});
 });

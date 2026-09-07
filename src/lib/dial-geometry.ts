@@ -57,9 +57,28 @@ export function minutesFromPoint(
 	return minutes === 0 ? maxMinutes : minutes;
 }
 
-/** The dial's minute range. Drag cannot reach past it. */
+/**
+ * Every face the dial can wear, each a length that divides into round marks.
+ *
+ * A typed length longer than the current face is rounded up to the next one
+ * rather than becoming a face of its own. That keeps the face a round number -
+ * so its marks are round too - and it is the same bargain a 30 minute face
+ * already offers: 25 minutes covers 25/30 of the circle and the face stays 30.
+ */
+export const FACE_LADDER = [30, 60, 90, 120, 150, 180, 240, 300, 360, 480, 600] as const;
+export type FaceMinutes = (typeof FACE_LADDER)[number];
+
+/** The longest face there is, and so the longest length worth accepting. */
+export const MAX_FACE_MINUTES = FACE_LADDER[FACE_LADDER.length - 1];
+
+/** The faces offered as buttons. The rest are only reached by typing a longer
+ *  length, but stay switchable back to these at any point. */
 export const FACE_OPTIONS = [30, 60] as const;
-export type FaceMinutes = (typeof FACE_OPTIONS)[number];
+
+/** The smallest face a length fits on. */
+export function faceFor(minutes: number): FaceMinutes {
+	return FACE_LADDER.find((face) => face >= minutes) ?? MAX_FACE_MINUTES;
+}
 
 export type FaceMark = { minutes: number; degrees: number; major: boolean };
 export type FaceNumber = { minutes: number; degrees: number; label: string };
