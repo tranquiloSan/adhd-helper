@@ -84,7 +84,7 @@
 		</span>
 	</div>
 
-	<p class="max-w-prose self-center text-center text-xs leading-relaxed text-neutral-500">
+	<p class="mt-6 max-w-prose self-center text-center text-xs leading-relaxed text-neutral-500">
 		Press <kbd class="rounded border border-neutral-700 px-1">n</kbd> on any other page to open this in
 		a panel without leaving what you are doing. Nothing here is ever cleared for you - it would eventually
 		delete something that mattered. The age above is the only nudge, so a pile cannot build up unnoticed.
