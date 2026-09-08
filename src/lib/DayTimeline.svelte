@@ -36,15 +36,28 @@
 	}: Props = $props();
 
 	const WIDTH = 600;
+	/**
+	 * The track itself, with the rest of the width kept clear for the overflow
+	 * mark.
+	 *
+	 * Reserved always rather than only when it is needed, because taking the room
+	 * from the track on the days that overflow would rescale the very thing this
+	 * is all for. Twelve hours divide into it exactly.
+	 */
+	const TRACK_WIDTH = 576;
 	const HEIGHT = 74;
 	const BAR_Y = 10;
 	const BAR_H = 30;
+	const MID_Y = BAR_Y + BAR_H / 2;
 	/** Blank between one hour and the next, so they read as hours rather than as
 	 *  one length with lines drawn on it - the ring's treatment, unrolled. */
 	const GAP = 2;
 
 	const TRACK = '#f2ece0';
 	const REMAINING = '#dc2626';
+	/** The colour of things that point rather than measure - the grip, and the
+	 *  mark that says the day runs off the end. */
+	const INDICATOR = '#fafafa';
 
 	const filled = $derived(over ? 0 : Math.min(1, Math.max(0, fraction)));
 
@@ -63,8 +76,8 @@
 		const edges = [0, ...marks.map((mark) => mark.fraction), 1];
 		return edges.slice(0, -1).map((from, i) => {
 			const to = edges[i + 1];
-			const x = from * WIDTH + (i === 0 ? 0 : GAP / 2);
-			const width = Math.max(0, to * WIDTH - x - (i === edges.length - 2 ? 0 : GAP / 2));
+			const x = from * TRACK_WIDTH + (i === 0 ? 0 : GAP / 2);
+			const width = Math.max(0, to * TRACK_WIDTH - x - (i === edges.length - 2 ? 0 : GAP / 2));
 			return { x, width };
 		});
 	});
@@ -75,7 +88,10 @@
 	function fractionAt(event: PointerEvent): number {
 		if (svg === null) return 0;
 		const rect = svg.getBoundingClientRect();
-		return (event.clientX - rect.left) / rect.width;
+		// Scaled off the track rather than the whole drawing, since the drawing is
+		// wider by the margin the overflow mark sits in.
+		const across = (event.clientX - rect.left) / rect.width;
+		return (across * WIDTH) / TRACK_WIDTH;
 	}
 
 	function onpointerdown(event: PointerEvent) {
@@ -137,7 +153,7 @@
 	     fill are one drawing rather than two. -->
 	{#if filled > 0}
 		<clipPath id="day-fill">
-			<rect x="0" y={BAR_Y} width={filled * WIDTH} height={BAR_H} />
+			<rect x="0" y={BAR_Y} width={filled * TRACK_WIDTH} height={BAR_H} />
 		</clipPath>
 		<g clip-path="url(#day-fill)">
 			{#each boxes as box, i (i)}
@@ -147,28 +163,35 @@
 	{/if}
 
 	<!-- A day too long for the track runs off the end rather than squeezing it.
-	     The reading underneath says how long it really is. -->
+	     In its own clear space and in the pointing colour, because an overflowing
+	     day fills the track and a red mark against a red bar cannot be seen. The
+	     clock above says how much there really is. -->
 	{#if overflow}
-		<path
-			d="M {WIDTH + 3} {BAR_Y + BAR_H / 2} l -9 -8 l 0 16 z"
-			fill={REMAINING}
-			transform="translate(-4, 0)"
-		/>
+		<g
+			stroke={INDICATOR}
+			stroke-width="3"
+			fill="none"
+			stroke-linecap="round"
+			stroke-linejoin="round"
+		>
+			<path d="M {TRACK_WIDTH + 8} {MID_Y - 7} l 7 7 l -7 7" />
+			<path d="M {TRACK_WIDTH + 17} {MID_Y - 7} l 7 7 l -7 7" />
+		</g>
 	{/if}
 
 	<g fill="#a3a3a3" font-size="12" text-anchor="middle">
 		{#each marks as mark (mark.label)}
-			<text x={mark.fraction * WIDTH} y={BAR_Y + BAR_H + 16}>{mark.label}</text>
+			<text x={mark.fraction * TRACK_WIDTH} y={BAR_Y + BAR_H + 16}>{mark.label}</text>
 		{/each}
 	</g>
 
 	{#if setting}
 		<!-- The grip. Wider than it looks: the whole track takes the pointer, so
 		     this only has to say which edge moves. -->
-		<g transform="translate({filled * WIDTH}, 0)">
-			<line y1={BAR_Y - 5} y2={BAR_Y + BAR_H + 5} stroke="#fafafa" stroke-width="2.5" />
-			<circle cy={BAR_Y + BAR_H / 2} r="7" fill="#fafafa" />
-			<circle cy={BAR_Y + BAR_H / 2} r="2.5" fill={REMAINING} />
+		<g transform="translate({filled * TRACK_WIDTH}, 0)">
+			<line y1={BAR_Y - 5} y2={BAR_Y + BAR_H + 5} stroke={INDICATOR} stroke-width="2.5" />
+			<circle cy={MID_Y} r="7" fill={INDICATOR} />
+			<circle cy={MID_Y} r="2.5" fill={REMAINING} />
 		</g>
 	{/if}
 
@@ -176,13 +199,13 @@
 		<text x="0" y={HEIGHT - 4} text-anchor="start">{startLabel}</text>
 		{#if setting}
 			<text
-				x={Math.min(WIDTH - 42, Math.max(42, filled * WIDTH))}
+				x={Math.min(TRACK_WIDTH - 42, Math.max(42, filled * TRACK_WIDTH))}
 				y={HEIGHT - 4}
 				text-anchor="middle"
 				fill="#d4d4d4">{endLabel}</text
 			>
 		{:else}
-			<text x={WIDTH} y={HEIGHT - 4} text-anchor="end">{endLabel}</text>
+			<text x={TRACK_WIDTH} y={HEIGHT - 4} text-anchor="end">{endLabel}</text>
 		{/if}
 	</g>
 </svg>
