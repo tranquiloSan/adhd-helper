@@ -1,34 +1,36 @@
 <script lang="ts">
 	type Props = {
-		startedAt: number;
-		endsAt: number;
-		/** Now, supplied rather than read, so the whole thing stays a pure drawing. */
-		now: number;
-		/** Whole-hour positions as fractions from 0 to 1, with clock labels. */
+		/**
+		 * Where the end sits on the track, 0 to 1.
+		 *
+		 * The same number in both modes, which is the point: while the day is
+		 * being named this is the handle, and once it is running it is the edge of
+		 * what is left. Pressing Start changes nothing about the track.
+		 */
+		fraction: number;
+		/** The end is further off than the track reaches. */
+		overflow?: boolean;
+		/** Hour boundaries as fractions from 0 to 1, with clock labels. */
 		marks: { fraction: number; label: string }[];
+		/** Being named rather than counted down: draws the grip and takes input. */
+		setting?: boolean;
+		/** The day is done, so there is nothing left to fill. */
 		over?: boolean;
 		/** The times printed under each end of the track. */
 		startLabel: string;
 		endLabel: string;
-		/**
-		 * Where the draggable end sits, 0 to 1. Set only while the day is being
-		 * chosen: the track is then a ruler running from now for as far as a drag
-		 * reaches, and this is the end picked out within it.
-		 */
-		handleFraction?: number | null;
 		onmove?: (fraction: number) => void;
 		onnudge?: (steps: number) => void;
 	};
 
 	let {
-		startedAt,
-		endsAt,
-		now,
+		fraction,
+		overflow = false,
 		marks,
+		setting = false,
 		over = false,
 		startLabel,
 		endLabel,
-		handleFraction = null,
 		onmove,
 		onnudge
 	}: Props = $props();
@@ -37,24 +39,35 @@
 	const HEIGHT = 74;
 	const BAR_Y = 10;
 	const BAR_H = 30;
+	/** Blank between one hour and the next, so they read as hours rather than as
+	 *  one length with lines drawn on it - the ring's treatment, unrolled. */
+	const GAP = 2;
 
 	const TRACK = '#f2ece0';
 	const REMAINING = '#dc2626';
-	const INK = '#1c1917';
 
-	const total = $derived(Math.max(1, endsAt - startedAt));
-	/** How much of the day has gone, 0 to 1. */
-	const gone = $derived(Math.min(1, Math.max(0, (now - startedAt) / total)));
-
-	const setting = $derived(handleFraction !== null);
+	const filled = $derived(over ? 0 : Math.min(1, Math.max(0, fraction)));
 
 	/**
-	 * Red is the day you have left. While it is being set that is everything
-	 * from now up to the handle; once it is running it is everything from the
-	 * marker to the end.
+	 * One box per hour, the first a stub unless the track starts on the hour.
+	 *
+	 * The boundaries are real clock times rather than a grid laid from now, which
+	 * is what lets them be labelled 14, 15, 16 - the thing a bar can say and a
+	 * dial cannot.
+	 *
+	 * Keyed by position rather than by fraction: the track slides forward with
+	 * the clock, so every fraction changes on every tick and a fraction key would
+	 * rebuild the whole row once a second.
 	 */
-	const fillFrom = $derived(setting ? 0 : gone);
-	const fillTo = $derived(setting ? (handleFraction ?? 0) : 1);
+	const boxes = $derived.by(() => {
+		const edges = [0, ...marks.map((mark) => mark.fraction), 1];
+		return edges.slice(0, -1).map((from, i) => {
+			const to = edges[i + 1];
+			const x = from * WIDTH + (i === 0 ? 0 : GAP / 2);
+			const width = Math.max(0, to * WIDTH - x - (i === edges.length - 2 ? 0 : GAP / 2));
+			return { x, width };
+		});
+	});
 
 	let svg: SVGSVGElement | null = null;
 	let dragging = $state(false);
@@ -105,7 +118,7 @@
 	aria-label={setting ? 'End of day' : 'Time remaining in the day'}
 	aria-valuemin={setting ? 0 : undefined}
 	aria-valuemax={setting ? 100 : undefined}
-	aria-valuenow={setting ? Math.round((handleFraction ?? 0) * 100) : undefined}
+	aria-valuenow={setting ? Math.round(filled * 100) : undefined}
 	aria-valuetext={setting ? endLabel : undefined}
 	onpointerdown={setting ? onpointerdown : undefined}
 	onpointermove={setting ? onpointermove : undefined}
@@ -113,29 +126,35 @@
 	onpointercancel={setting ? onpointerup : undefined}
 	onkeydown={setting ? onkeydown : undefined}
 >
-	<!-- The whole day. Red is what is left of it, matching the timer's language. -->
-	<rect x="0" y={BAR_Y} width={WIDTH} height={BAR_H} rx="6" fill={TRACK} />
+	<!-- Twelve hours from now, always, whichever mode this is in - so an hour is
+	     the same width today as it was yesterday, and red means the same amount
+	     of time it has always meant. -->
+	{#each boxes as box, i (i)}
+		<rect x={box.x} y={BAR_Y} width={box.width} height={BAR_H} rx="2" fill={TRACK} />
+	{/each}
 
-	{#if fillTo > fillFrom}
-		<clipPath id="day-clip">
-			<rect x="0" y={BAR_Y} width={WIDTH} height={BAR_H} rx="6" />
+	<!-- Red is what is left, cut by the same hour boundaries so the count and the
+	     fill are one drawing rather than two. -->
+	{#if filled > 0}
+		<clipPath id="day-fill">
+			<rect x="0" y={BAR_Y} width={filled * WIDTH} height={BAR_H} />
 		</clipPath>
-		<rect
-			x={fillFrom * WIDTH}
-			y={BAR_Y}
-			width={(fillTo - fillFrom) * WIDTH}
-			height={BAR_H}
-			fill={REMAINING}
-			clip-path="url(#day-clip)"
-		/>
+		<g clip-path="url(#day-fill)">
+			{#each boxes as box, i (i)}
+				<rect x={box.x} y={BAR_Y} width={box.width} height={BAR_H} rx="2" fill={REMAINING} />
+			{/each}
+		</g>
 	{/if}
 
-	<!-- Hour dividers, so remaining whole hours can be counted without reading. -->
-	<g stroke={INK} stroke-width="1" opacity="0.28">
-		{#each marks as mark (mark.label)}
-			<line x1={mark.fraction * WIDTH} y1={BAR_Y} x2={mark.fraction * WIDTH} y2={BAR_Y + BAR_H} />
-		{/each}
-	</g>
+	<!-- A day too long for the track runs off the end rather than squeezing it.
+	     The reading underneath says how long it really is. -->
+	{#if overflow}
+		<path
+			d="M {WIDTH + 3} {BAR_Y + BAR_H / 2} l -9 -8 l 0 16 z"
+			fill={REMAINING}
+			transform="translate(-4, 0)"
+		/>
+	{/if}
 
 	<g fill="#a3a3a3" font-size="12" text-anchor="middle">
 		{#each marks as mark (mark.label)}
@@ -143,23 +162,10 @@
 		{/each}
 	</g>
 
-	<!-- Now. Drawn over the bar so the boundary is unambiguous once the fill is
-	     nearly gone. -->
-	{#if !over}
-		<line
-			x1={gone * WIDTH}
-			y1={BAR_Y - 5}
-			x2={gone * WIDTH}
-			y2={BAR_Y + BAR_H + 5}
-			stroke="#fafafa"
-			stroke-width="2.5"
-		/>
-	{/if}
-
 	{#if setting}
 		<!-- The grip. Wider than it looks: the whole track takes the pointer, so
 		     this only has to say which edge moves. -->
-		<g transform="translate({(handleFraction ?? 0) * WIDTH}, 0)">
+		<g transform="translate({filled * WIDTH}, 0)">
 			<line y1={BAR_Y - 5} y2={BAR_Y + BAR_H + 5} stroke="#fafafa" stroke-width="2.5" />
 			<circle cy={BAR_Y + BAR_H / 2} r="7" fill="#fafafa" />
 			<circle cy={BAR_Y + BAR_H / 2} r="2.5" fill={REMAINING} />
@@ -170,7 +176,7 @@
 		<text x="0" y={HEIGHT - 4} text-anchor="start">{startLabel}</text>
 		{#if setting}
 			<text
-				x={Math.min(WIDTH - 42, Math.max(42, (handleFraction ?? 0) * WIDTH))}
+				x={Math.min(WIDTH - 42, Math.max(42, filled * WIDTH))}
 				y={HEIGHT - 4}
 				text-anchor="middle"
 				fill="#d4d4d4">{endLabel}</text

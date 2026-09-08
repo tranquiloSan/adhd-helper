@@ -43,9 +43,11 @@ offload, and pointedly not somewhere work is tracked.
 _Avoid_: todo, tasks, backlog
 
 **Timeline**:
-The horizontal track the day is drawn on, running from the time it started to
-the end you named, with the remaining part filled. Its end is dragged to set
-that time, so like the dial it is both the display and the main control.
+The horizontal track the day is drawn on: the next twelve hours from now, the
+same before and after it is started, with the time remaining filled from the left
+and an hour to a box. Its end is dragged to set the finishing time, so like the
+dial it is both the display and the main control. A day too long to fit runs off
+the end rather than squeezing it.
 _Avoid_: bar, progress bar, slider
 
 **Dial**:

@@ -39,17 +39,6 @@ export class DayCountdown {
 		return Math.max(0, this.#endsAt - this.#now);
 	}
 
-	/** The whole span, which is what the dial's face represents. */
-	get totalMs(): number {
-		if (this.#startedAt === null || this.#endsAt === null) return 0;
-		return Math.max(0, this.#endsAt - this.#startedAt);
-	}
-
-	get fraction(): number {
-		if (this.totalMs <= 0) return 0;
-		return Math.min(1, Math.max(0, this.remainingMs / this.totalMs));
-	}
-
 	get overdueMs(): number {
 		if (this.status !== 'over' || this.#endsAt === null) return 0;
 		return Math.max(0, this.#now - this.#endsAt);

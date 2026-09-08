@@ -44,13 +44,25 @@
 			: `${formatApproximate(plannedEndsAt - now)}, ending ${formatTimeWithDay(plannedEndsAt, now)}`
 	);
 
-	/** Being set up, the track is a ruler running from now for as far as a drag
-	 *  reaches. Once running, it is the day itself. */
-	const marks = $derived.by(() => {
-		if (day.status === 'idle') return hourMarks(now, now + DRAG_SPAN_MS);
-		if (day.startedAt === null || day.endsAt === null) return [];
-		return hourMarks(day.startedAt, day.endsAt);
-	});
+	/**
+	 * The track is the next twelve hours, before and after Start alike.
+	 *
+	 * It used to become the day itself once running, which stretched it to
+	 * whatever length that day was - so a full bar meant four hours some days and
+	 * eleven others, and pressing Start silently changed what an hour was worth.
+	 * Fixed, an hour is the same width today as it was yesterday, and a day
+	 * longer or shorter than usual says so the moment you start it.
+	 */
+	const marks = $derived(hourMarks(now, now + DRAG_SPAN_MS));
+
+	/** The end being shown: the one being named, or the one running. */
+	const shownEndsAt = $derived(day.status === 'idle' ? plannedEndsAt : day.endsAt);
+	/** Where that end sits on the track - the handle while it is being named, the
+	 *  edge of what is left once it is running. One number, both modes. */
+	const trackFraction = $derived(shownEndsAt === null ? 0 : fractionForTime(now, shownEndsAt));
+	/** Further off than the track reaches, which only a day over twelve hours can
+	 *  be, and only for the hours it has in hand. */
+	const trackOverflow = $derived(shownEndsAt !== null && shownEndsAt > now + DRAG_SPAN_MS);
 
 	// The layout drives the countdown itself; this only moves the marker - and,
 	// before the day starts, walks the ruler forward under the handle.
@@ -95,19 +107,21 @@
 </svelte:head>
 
 <main class="mx-auto flex w-full max-w-3xl flex-col items-center justify-center gap-6 px-6 py-4">
-	{#if day.status === 'idle'}
-		<DayTimeline
-			startedAt={now}
-			endsAt={now + DRAG_SPAN_MS}
-			{now}
-			{marks}
-			startLabel={formatTimeOfDay(now)}
-			endLabel={plannedEndsAt === null ? '' : formatTimeWithDay(plannedEndsAt, now)}
-			handleFraction={plannedEndsAt === null ? 0 : fractionForTime(now, plannedEndsAt)}
-			onmove={setFromFraction}
-			onnudge={nudge}
-		/>
+	<!-- One track, drawn the same way throughout. Start adds the countdown under
+	     it and takes the grip away; it does not touch the scale. -->
+	<DayTimeline
+		fraction={trackFraction}
+		overflow={trackOverflow}
+		{marks}
+		setting={day.status === 'idle'}
+		over={day.status === 'over'}
+		startLabel={formatTimeOfDay(now)}
+		endLabel={shownEndsAt === null ? '' : formatTimeWithDay(shownEndsAt, now)}
+		onmove={day.status === 'idle' ? setFromFraction : undefined}
+		onnudge={day.status === 'idle' ? nudge : undefined}
+	/>
 
+	{#if day.status === 'idle'}
 		<div class="flex flex-col items-center gap-3">
 			<p class="text-center text-neutral-300">When are you stopping?</p>
 
@@ -137,16 +151,6 @@
 			</p>
 		</div>
 	{:else}
-		<DayTimeline
-			startedAt={day.startedAt ?? now}
-			endsAt={day.endsAt ?? now}
-			{now}
-			{marks}
-			over={day.status === 'over'}
-			startLabel={formatTimeOfDay(day.startedAt ?? now)}
-			endLabel={formatTimeWithDay(day.endsAt ?? now, now)}
-		/>
-
 		<div class="grid place-items-center gap-1">
 			<span class="text-7xl font-semibold tracking-tight text-neutral-50 tabular-nums">
 				{day.status === 'over' ? '0:00' : formatDuration(day.remainingMs)}
@@ -160,6 +164,14 @@
 					Until {formatTimeWithDay(day.endsAt ?? now, now)}
 				{/if}
 			</span>
+			<!-- How far in you are. The track shows only what is left, which is what
+			     you look at; this is the other half, and a sentence is enough for
+			     something you read rather than glance at. -->
+			{#if day.startedAt !== null}
+				<span class="text-xs text-neutral-500">
+					started {formatTimeWithDay(day.startedAt, now)} - {formatApproximate(now - day.startedAt)} in
+				</span>
+			{/if}
 		</div>
 
 		<button
@@ -173,8 +185,9 @@
 
 	<p class="max-w-prose text-center text-xs leading-relaxed text-neutral-500">
 		Start it with the time you are stopping, and it shows what is left of the day. It does nothing
-		until you start it, so there are no working hours to configure and no weekends to get wrong.
-		Coarse by design: it tells you the afternoon is half gone, never anything finer.
+		until you start it, so there are no working hours to configure and no weekends to get wrong. The
+		track is the next twelve hours whether or not it has started, so an hour is always the same
+		width and a day longer or shorter than usual looks it.
 	</p>
 
 	{#if day.status === 'idle'}

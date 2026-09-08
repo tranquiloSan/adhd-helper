@@ -16,7 +16,6 @@ describe('day countdown', () => {
 		const day = new DayCountdown();
 		expect(day.status).toBe('idle');
 		expect(day.remainingMs).toBe(0);
-		expect(day.fraction).toBe(0);
 	});
 
 	it('refuses an end time that has already passed', () => {
@@ -29,12 +28,6 @@ describe('day countdown', () => {
 		const day = started(8);
 		day.sync(T0 + 3 * HOUR);
 		expect(day.remainingMs).toBe(5 * HOUR);
-	});
-
-	it('reports the fraction of the day left, which is what the dial draws', () => {
-		const day = started(8);
-		day.sync(T0 + 6 * HOUR);
-		expect(day.fraction).toBeCloseTo(0.25);
 	});
 
 	it('ends once the time arrives', () => {
@@ -89,7 +82,7 @@ describe('day countdown restore', () => {
 		const day = started(8);
 		day.stop(T0 + MINUTE);
 		expect(day.status).toBe('idle');
-		expect(day.totalMs).toBe(0);
+		expect(day.endsAt).toBeNull();
 	});
 });
 
