@@ -128,7 +128,9 @@
 <svg
 	bind:this={svg}
 	viewBox="0 0 {WIDTH} {HEIGHT}"
-	class="w-[min(92vw,42rem)] {setting ? 'cursor-ew-resize touch-none' : ''}"
+	class="w-[min(92vw,42rem)] outline-none select-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-red-500 {setting
+		? 'cursor-ew-resize touch-none'
+		: ''}"
 	role={setting ? 'slider' : 'img'}
 	tabindex={setting ? 0 : undefined}
 	aria-label={setting ? 'End of day' : 'Time remaining in the day'}
