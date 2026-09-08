@@ -5,6 +5,16 @@ export const PRESET_MINUTES = [5, 10, 25] as const;
 
 export const DEFAULT_DURATION_MS = 25 * 60_000;
 
+/**
+ * The longest length worth accepting, in minutes.
+ *
+ * One full lap of the ring, which is twelve hours. Taking the limit from what
+ * the dial can draw rather than picking a round number is what keeps every slot
+ * reachable: a shorter cap would leave the last slots permanently dead, pointed
+ * at and refusing to answer.
+ */
+export const MAX_LENGTH_MINUTES = 12 * 60;
+
 /** Hours, minutes, or both: "90", "2h", "1h30", "1h30m", "1.5h". */
 const TYPED_LENGTH = /^\s*(?:(\d+(?:\.\d+)?)\s*h)?\s*(?:(\d+(?:\.\d+)?)\s*m?)?\s*$/i;
 
@@ -69,6 +79,12 @@ export class Timer {
 			case 'finished':
 				return 0;
 		}
+	}
+
+	/** The moment it finishes, or null when there is nothing running. Kept after
+	 *  finishing, so "ran out at" can still say when. */
+	get endsAt(): number | null {
+		return this.#endsAt;
 	}
 
 	/** How much of the duration has been spent. */
@@ -165,3 +181,7 @@ export class Timer {
 		}
 	}
 }
+
+/** Shared: the alarm has to fire while another tool is on screen, so the timer
+ *  is driven from the layout rather than from its own page. */
+export const timer = new Timer();

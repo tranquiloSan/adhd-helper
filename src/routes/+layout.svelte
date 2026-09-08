@@ -11,13 +11,16 @@
 	import { isTypingTarget } from '$lib/keyboard';
 	import { notes } from '$lib/notes.svelte';
 	import NotesOverlay from '$lib/NotesOverlay.svelte';
+	import { timer } from '$lib/timer.svelte';
 	import {
 		loadDay,
 		loadElapsed,
 		loadNotes,
+		loadSnapshot,
 		saveDay,
 		saveElapsed,
-		saveNotes
+		saveNotes,
+		saveSnapshot
 	} from '$lib/persistence';
 
 	let { children } = $props();
@@ -33,11 +36,16 @@
 
 	let dumpOpen = $state(false);
 
-	// The day countdown and the dump are hydrated and persisted here rather than
-	// on their own pages: the day has to keep counting while you are looking at
-	// another tool, and the end-of-day nudge needs to know whether the dump is
-	// empty from wherever you happen to be.
+	// Every tool is hydrated and persisted here rather than on its own page: the
+	// day has to keep counting while you are looking at another tool, the
+	// end-of-day nudge needs to know whether the dump is empty from wherever you
+	// happen to be, and the countdown's alarm has to fire wherever you happen to
+	// be. A tool owned by its page stops existing the moment you navigate away,
+	// which is exactly when it most needs to still be running.
 	if (browser) {
+		const storedTimer = loadSnapshot();
+		if (storedTimer !== null) timer.restore(storedTimer);
+
 		const storedDay = loadDay();
 		if (storedDay !== null) day.restore(storedDay);
 
@@ -47,6 +55,17 @@
 		const storedElapsed = loadElapsed();
 		if (storedElapsed !== null) elapsed.restore(storedElapsed);
 	}
+
+	// Only advances the countdown's idea of "now"; it never accumulates elapsed
+	// time, so throttling in a background tab cannot make it drift. A background
+	// tab does throttle this to about once a minute after five minutes, so a
+	// buried alarm can be up to that late - the fix for which is a timeout
+	// scheduled at the end, not a faster interval.
+	$effect(() => {
+		if (timer.status !== 'running') return;
+		const id = setInterval(() => timer.sync(), 100);
+		return () => clearInterval(id);
+	});
 
 	$effect(() => {
 		if (day.status !== 'running') return;
@@ -66,6 +85,7 @@
 	// A throttled tab runs behind on both counts, so catch up when looked at.
 	$effect(() => {
 		const resync = () => {
+			timer.sync();
 			day.sync();
 			elapsed.sync();
 		};
@@ -85,6 +105,25 @@
 		day.acknowledge();
 	});
 
+	// Cleanup runs when the status changes away from finished, which is what
+	// stops the alarm when it is dismissed.
+	$effect(() => {
+		if (timer.status !== 'finished') return;
+		alarm.start('Your timer has finished.');
+		return () => alarm.stop();
+	});
+
+	$effect(() => {
+		if (timer.status !== 'running') return;
+		const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+		window.addEventListener('beforeunload', warn);
+		return () => window.removeEventListener('beforeunload', warn);
+	});
+
+	$effect(() => {
+		saveSnapshot(timer.toSnapshot());
+	});
+
 	$effect(() => {
 		saveDay(day.toSnapshot());
 	});
@@ -95,6 +134,33 @@
 
 	$effect(() => {
 		saveNotes(notes.toSnapshot());
+	});
+
+	/** The countdown owns the tab whenever it is running or waiting to be
+	 *  dismissed - it is the only tool with an alarm, so it is the only one whose
+	 *  state you need to see from somewhere else. Otherwise the tool on screen
+	 *  says what it is. */
+	const pageTitle = $derived.by(() => {
+		if (timer.status === 'finished') return 'Time is up - adhd-helper';
+		if (timer.status === 'running') return `${formatDuration(timer.remainingMs)} - adhd-helper`;
+
+		// Matched on the route id, not the path: `resolve` returns a relative URL
+		// when the site is prerendered, so comparing it against `pathname` never
+		// matches in the built HTML and every page would claim to be the timer.
+		switch (page.route.id) {
+			case '/elapsed':
+				return elapsed.status === 'running'
+					? `${formatDuration(elapsed.elapsedMs)} elapsed - adhd-helper`
+					: 'Elapsed - adhd-helper';
+			case '/day':
+				return day.status === 'running'
+					? `${formatDuration(day.remainingMs)} left - adhd-helper`
+					: 'Day - adhd-helper';
+			case '/notes':
+				return 'Notes - adhd-helper';
+			default:
+				return 'Timer - adhd-helper';
+		}
 	});
 
 	// "n" from anywhere opens the dump, already focused. Capture has to cost
@@ -121,7 +187,7 @@
 
 			if (event.key !== 'n') return;
 			// Redundant on the notes page, which is the same box full size.
-			if (page.url.pathname === resolve('/notes')) return;
+			if (page.route.id === '/notes') return;
 
 			event.preventDefault();
 			dumpOpen = true;
@@ -132,15 +198,25 @@
 	});
 </script>
 
-<svelte:head><link rel="icon" href={favicon} /></svelte:head>
+<!--
+	The tab title lives here rather than on each page, because the countdown can
+	be running while another tool is on screen and the title is the one signal
+	that reaches you there. It cannot be a per-page title with an override: head
+	elements appear in the order they are created, and a title created later -
+	when the countdown starts - would sit behind the page's own and be ignored.
+-->
+<svelte:head>
+	<link rel="icon" href={favicon} />
+	<title>{pageTitle}</title>
+</svelte:head>
 
 <div class="flex min-h-screen flex-col">
 	<nav class="flex justify-center gap-1 p-3 text-sm">
 		{#each TOOLS as tool (tool.href)}
 			<a
 				href={resolve(tool.href)}
-				aria-current={page.url.pathname === resolve(tool.href) ? 'page' : undefined}
-				class="rounded-full px-3 py-1 transition {page.url.pathname === resolve(tool.href)
+				aria-current={page.route.id === tool.href ? 'page' : undefined}
+				class="rounded-full px-3 py-1 transition {page.route.id === tool.href
 					? 'bg-neutral-800 text-neutral-100'
 					: 'text-neutral-500 hover:text-neutral-300'}"
 			>

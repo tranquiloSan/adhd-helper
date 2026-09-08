@@ -5,6 +5,15 @@ export type ElapsedStatus = 'idle' | 'running' | 'paused';
  *  same moment rather than two unrelated signals. */
 export const DEFAULT_THRESHOLD_MINUTES = 60;
 
+/**
+ * One stretch of the account: time worked, or time away.
+ *
+ * A break still carries no description - ADR 0002, and confirmed in use when the
+ * types turned out not to be wanted. A segment says when it ran and nothing
+ * else; anything with words in it belongs in notes.
+ */
+export type Segment = { kind: 'work' | 'break'; startedAt: number; endedAt: number | null };
+
 export type ElapsedSnapshot = {
 	status: ElapsedStatus;
 	startedAt: number | null;
@@ -16,6 +25,9 @@ export type ElapsedSnapshot = {
 	/** Time spent on breaks that have finished. */
 	breakMs: number;
 	breakCount: number;
+	/** The account, in order. Optional because it arrived after the first
+	 *  versions shipped, and a stored snapshot without it is still a stretch. */
+	segments?: Segment[];
 };
 
 /**
@@ -29,6 +41,12 @@ export type ElapsedSnapshot = {
  * `stretchStartedAt + elapsedMs + breakMs + currentBreakMs` lands on now. That
  * invariant is the whole reason the start time is worth showing: without the
  * break totals the two figures stop agreeing the moment you pause.
+ *
+ * The counters stay the authority on those totals even though `segments` could
+ * derive them. Deriving is the tidier end state, but requiring the new field
+ * would reject every snapshot already in a browser and drop a stretch that is
+ * still running, which is the one thing a reload must not do. The small
+ * redundancy buys that safety.
  */
 export class Elapsed {
 	status = $state<ElapsedStatus>('idle');
@@ -42,6 +60,7 @@ export class Elapsed {
 	#pausedAt = $state<number | null>(null);
 	#breakMs = $state(0);
 	#breakCount = $state(0);
+	#segments = $state<Segment[]>([]);
 	#now = $state(Date.now());
 
 	get elapsedMs(): number {
@@ -71,6 +90,12 @@ export class Elapsed {
 		return this.#breakMs;
 	}
 
+	/** Every worked and away period of this stretch, oldest first, with the one
+	 *  you are in still open. Emptied by a reset, like the counters. */
+	get segments(): Segment[] {
+		return this.#segments;
+	}
+
 	/** The break you are on, counting up. Zero whenever you are not on one. */
 	get currentBreakMs(): number {
 		if (this.status !== 'paused' || this.#pausedAt === null) return 0;
@@ -81,6 +106,12 @@ export class Elapsed {
 		this.#now = now;
 	}
 
+	/** Close the period currently open, if there is one. */
+	#closeSegment(now: number): void {
+		const open = this.#segments[this.#segments.length - 1];
+		if (open !== undefined && open.endedAt === null) open.endedAt = now;
+	}
+
 	start(now: number = Date.now()): void {
 		this.#startedAt = now;
 		this.#accumulatedMs = 0;
@@ -88,6 +119,7 @@ export class Elapsed {
 		this.#pausedAt = null;
 		this.#breakMs = 0;
 		this.#breakCount = 0;
+		this.#segments = [{ kind: 'work', startedAt: now, endedAt: null }];
 		this.#now = now;
 		this.status = 'running';
 	}
@@ -99,6 +131,8 @@ export class Elapsed {
 		}
 		this.#startedAt = null;
 		this.#pausedAt = now;
+		this.#closeSegment(now);
+		this.#segments.push({ kind: 'break', startedAt: now, endedAt: null });
 		this.#now = now;
 		this.status = 'paused';
 	}
@@ -111,6 +145,8 @@ export class Elapsed {
 		}
 		this.#pausedAt = null;
 		this.#startedAt = now;
+		this.#closeSegment(now);
+		this.#segments.push({ kind: 'work', startedAt: now, endedAt: null });
 		this.#now = now;
 		this.status = 'running';
 	}
@@ -122,6 +158,7 @@ export class Elapsed {
 		this.#pausedAt = null;
 		this.#breakMs = 0;
 		this.#breakCount = 0;
+		this.#segments = [];
 		this.#now = now;
 		this.status = 'idle';
 	}
@@ -134,7 +171,8 @@ export class Elapsed {
 			firstStartedAt: this.#firstStartedAt,
 			pausedAt: this.#pausedAt,
 			breakMs: this.#breakMs,
-			breakCount: this.#breakCount
+			breakCount: this.#breakCount,
+			segments: this.#segments.map((segment) => ({ ...segment }))
 		};
 	}
 
@@ -152,6 +190,9 @@ export class Elapsed {
 		this.#pausedAt = snapshot.pausedAt;
 		this.#breakMs = snapshot.breakMs;
 		this.#breakCount = snapshot.breakCount;
+		// A stretch from before the account existed keeps running; it just has
+		// nothing to itemise.
+		this.#segments = (snapshot.segments ?? []).map((segment) => ({ ...segment }));
 		this.#now = now;
 	}
 }

@@ -1,5 +1,10 @@
 # Dial faces are a ladder of round lengths, held rather than derived
 
+**Superseded by `0005-the-dial-face-is-fixed-at-an-hour.md`.** The face is now a
+fixed hour. Kept because the two wrong versions recorded below are still wrong,
+and because the argument that overturned this one is the argument it makes for
+itself - which is worth being able to read in the original.
+
 The dial's face was two fixed sizes, 30 and 60 minutes, and a longer length had
 nowhere to go. Making the face fit the length looks like the obvious fix, and it
 is wrong twice over. Both wrong versions were built and shipped before this one,

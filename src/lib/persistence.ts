@@ -1,12 +1,10 @@
-import { FACE_LADDER, type FaceMinutes } from './dial-geometry';
 import type { DaySnapshot, DayStatus } from './day.svelte';
-import type { ElapsedSnapshot, ElapsedStatus } from './elapsed.svelte';
+import type { ElapsedSnapshot, ElapsedStatus, Segment } from './elapsed.svelte';
 import type { NotesSnapshot } from './notes.svelte';
 import type { TimerSnapshot, TimerStatus } from './timer.svelte';
 
 const KEYS = {
 	timer: 'adhd-helper:timer',
-	face: 'adhd-helper:face',
 	elapsed: 'adhd-helper:elapsed',
 	// Bumped: an earlier version wrote this on mount, so stored values were
 	// defaults nobody chose and the default could never be improved on.
@@ -66,16 +64,16 @@ export function saveSnapshot(snapshot: TimerSnapshot): void {
 	write(KEYS.timer, snapshot);
 }
 
-/** The chosen dial range is a preference, not timer state, so it is stored
- *  apart from the snapshot and survives a reset. Validated against the whole
- *  ladder, not just the two buttons: a face grown to fit a typed length is a
- *  face like any other, and rejecting it would silently drop back to 30. */
-export function loadFaceMinutes(): FaceMinutes | null {
-	return read(KEYS.face, (value) => FACE_LADDER.find((option) => option === value) ?? null);
-}
-
-export function saveFaceMinutes(faceMinutes: FaceMinutes): void {
-	write(KEYS.face, faceMinutes);
+/** A stored account row. Anything malformed is dropped from the list rather
+ *  than rejecting the stretch it belongs to. */
+function isSegment(value: unknown): value is Segment {
+	if (typeof value !== 'object' || value === null) return false;
+	const v = value as Record<string, unknown>;
+	return (
+		(v.kind === 'work' || v.kind === 'break') &&
+		isFiniteNumber(v.startedAt) &&
+		isNullableNumber(v.endedAt)
+	);
 }
 
 export function loadElapsed(): ElapsedSnapshot | null {
@@ -99,7 +97,10 @@ export function loadElapsed(): ElapsedSnapshot | null {
 			firstStartedAt: isNullableNumber(v.firstStartedAt) ? v.firstStartedAt : null,
 			pausedAt: isNullableNumber(v.pausedAt) ? v.pausedAt : null,
 			breakMs: isFiniteNumber(v.breakMs) ? v.breakMs : 0,
-			breakCount: isFiniteNumber(v.breakCount) ? v.breakCount : 0
+			breakCount: isFiniteNumber(v.breakCount) ? v.breakCount : 0,
+			// Same rule again, for the same reason: the account arrived last, so
+			// its absence is a stretch from an earlier version, not a bad one.
+			segments: Array.isArray(v.segments) ? v.segments.filter(isSegment) : []
 		};
 	});
 }
