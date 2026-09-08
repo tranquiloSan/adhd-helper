@@ -68,14 +68,26 @@ and four lines of copy explaining the whole arrangement to someone whose dial is
 supposed to be glanceable. All of it is gone. A face with no state cannot be in
 the wrong state.
 
-A drag sets the minutes of the hour it is already in, and winds past twelve
-o'clock to change which hour that is. The first version of this clamped a drag to
-the face and was plainly wrong in use: with 1h30 typed, pointing at the 10 gave
-ten minutes and silently threw the hour away. A face showing one hour of a longer
-length has to mean that hour when you point at it, or it is not a control at all.
-Winding is then the only way back out, and it is the one a physical dial would
-have offered anyway - keep going round and the length keeps growing, turn back
-and it shrinks, with a floor at zero and a ceiling at the longest length.
+Both halves are pointed at the same way, which is what makes the hour hand and
+minute hand more than a description. A drag on the face sets the minutes of the
+hour it is already in, and winds past twelve o'clock to change which hour that
+is. A click on the ring sets the hour straight out and keeps the minutes. So 1h30
+pointed at the 10 is 1h10, and pointed at the fourth slot is 3h30.
+
+The first version clamped a face drag to the face and was plainly wrong in use:
+with 1h30 typed, pointing at the 10 gave ten minutes and silently threw the hour
+away. A face showing one hour of a longer length has to mean that hour when you
+point at it, or it is not a control at all. Winding is then the way back out, and
+it is the one a physical dial would have offered anyway - keep going round and
+the length grows, turn back and it shrinks, with a floor at zero and a ceiling at
+the longest length.
+
+Two details the ring needs to be usable. Which half a drag is working is decided
+when it starts and held for its whole life, because a face drag is allowed to
+stray off the disc - that is how you reach the last minute of an hour - and must
+not turn into an hour drag halfway through. And the ring's slots are four units
+wide, which is not a target anyone can aim at, so a transparent backdrop makes
+everything beyond the disc's outline count as the ring.
 
 None of that endangers what 0004 was protecting. Its reason for a held face - that
 a drag must not rescale the thing it is aiming at - is satisfied more completely

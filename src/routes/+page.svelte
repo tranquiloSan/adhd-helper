@@ -219,9 +219,10 @@
 		<p class="max-w-prose text-center text-xs leading-relaxed text-neutral-500">
 			Space starts and pauses. The length is locked once running - reset to change it. The face
 			always means an hour, so a given amount of red always means the same amount of time, and the
-			ring outside it counts the whole length down an hour to a slot. Dragging sets the minutes of
-			the hour you are in; carry on round past the top to add an hour, or back the other way to drop
-			one. The custom field takes minutes, or hours with an h - 90, 2h and 1h30 all work.
+			ring outside it counts the whole length down an hour to a slot. Drag the face to set the
+			minutes of the hour you are in, carrying on round past the top to add an hour; or click the
+			ring straight on to pick the hour and keep the minutes. Arrow keys nudge a minute, with shift
+			an hour. The custom field takes minutes, or hours with an h - 90, 2h and 1h30 all work.
 		</p>
 	</div>
 

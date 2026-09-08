@@ -67,7 +67,8 @@ part the face holds - still to come on the timer, already spent on the elapsed
 count. The slot for the hour in progress fills as it goes, so the ring keeps
 moving while the face swaps hours over. Boundaries land on the printed numbers,
 so face and ring are a minute hand and an hour hand. Always drawn, lit or not,
-and laps every twelve hours.
+and laps every twelve hours. Like the dial it is also a control: clicking a slot
+sets the hour and leaves the minutes alone.
 _Avoid_: rim, bezel, dots, pips
 
 **Account**:
