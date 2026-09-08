@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatTimeWithDay } from './format';
+import { formatCompact, formatTimeWithDay } from './format';
 
 /** An arbitrary Wednesday, built locally so the expectations do not depend on
  *  the machine's timezone. */
@@ -34,5 +34,22 @@ describe('formatTimeWithDay', () => {
 
 	it('falls back to the date once a weekday stops identifying a day', () => {
 		expect(formatTimeWithDay(at(17, 18, 0), now)).toBe('18:00 on 17 Sep');
+	});
+});
+
+describe('formatCompact', () => {
+	it('gives minutes below an hour', () => {
+		expect(formatCompact(45 * 60_000)).toBe('45m');
+		expect(formatCompact(59 * 60_000)).toBe('59m');
+	});
+
+	it('rounds to the hour above one, since the clock has the exact figure', () => {
+		expect(formatCompact(60 * 60_000)).toBe('1h');
+		expect(formatCompact(4 * 3_600_000 + 5 * 60_000)).toBe('4h');
+		expect(formatCompact(4 * 3_600_000 + 40 * 60_000)).toBe('5h');
+	});
+
+	it('never goes negative', () => {
+		expect(formatCompact(-5000)).toBe('0m');
 	});
 });

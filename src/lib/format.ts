@@ -26,6 +26,19 @@ export function formatApproximate(ms: number): string {
 	return hours === 1 ? '1 hour' : `${hours} hours`;
 }
 
+/**
+ * A duration in the fewest characters that still read as one: "45m", "4h".
+ *
+ * For places with no room for a phrase - the mark saying a day runs off the end
+ * of its track. Rounded to the hour once past one, because it answers roughly
+ * how far beyond and the clock above answers it exactly.
+ */
+export function formatCompact(ms: number): string {
+	const minutes = Math.round(Math.max(0, ms) / 60_000);
+	if (minutes < 60) return `${minutes}m`;
+	return `${Math.round(minutes / 60)}h`;
+}
+
 /** How long something has sat untouched, for "untouched for 3 days". */
 export function formatAge(ms: number): string {
 	const hours = Math.floor(ms / 3_600_000);
