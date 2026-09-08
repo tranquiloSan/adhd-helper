@@ -5,6 +5,7 @@
 	import { day, hourMarks, resolveEndTime } from '$lib/day.svelte';
 	import {
 		formatApproximate,
+		formatCompact,
 		formatDuration,
 		formatTimeOfDay,
 		formatTimeWithDay
@@ -60,9 +61,13 @@
 	/** Where that end sits on the track - the handle while it is being named, the
 	 *  edge of what is left once it is running. One number, both modes. */
 	const trackFraction = $derived(shownEndsAt === null ? 0 : fractionForTime(now, shownEndsAt));
-	/** Further off than the track reaches, which only a day over twelve hours can
-	 *  be, and only for the hours it has in hand. */
-	const trackOverflow = $derived(shownEndsAt !== null && shownEndsAt > now + DRAG_SPAN_MS);
+	/** How far past the track's reach the end sits, which only a day over twelve
+	 *  hours can be, and only for the hours it has in hand. */
+	const trackOverflow = $derived.by(() => {
+		if (shownEndsAt === null) return '';
+		const beyond = shownEndsAt - (now + DRAG_SPAN_MS);
+		return beyond > 0 ? `+${formatCompact(beyond)}` : '';
+	});
 
 	// The layout drives the countdown itself; this only moves the marker - and,
 	// before the day starts, walks the ruler forward under the handle.
@@ -111,7 +116,7 @@
 	     it and takes the grip away; it does not touch the scale. -->
 	<DayTimeline
 		fraction={trackFraction}
-		overflow={trackOverflow}
+		overflowLabel={trackOverflow}
 		{marks}
 		setting={day.status === 'idle'}
 		over={day.status === 'over'}

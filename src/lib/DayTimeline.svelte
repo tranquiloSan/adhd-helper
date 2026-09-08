@@ -8,8 +8,9 @@
 		 * what is left. Pressing Start changes nothing about the track.
 		 */
 		fraction: number;
-		/** The end is further off than the track reaches. */
-		overflow?: boolean;
+		/** How far past the end of the track the day reaches, already written short
+		 *  - "+4h". Empty when it fits. */
+		overflowLabel?: string;
 		/** Hour boundaries as fractions from 0 to 1, with clock labels. */
 		marks: { fraction: number; label: string }[];
 		/** Being named rather than counted down: draws the grip and takes input. */
@@ -25,7 +26,7 @@
 
 	let {
 		fraction,
-		overflow = false,
+		overflowLabel = '',
 		marks,
 		setting = false,
 		over = false,
@@ -42,9 +43,9 @@
 	 *
 	 * Reserved always rather than only when it is needed, because taking the room
 	 * from the track on the days that overflow would rescale the very thing this
-	 * is all for. Twelve hours divide into it exactly.
+	 * is all for. Twelve hours divide into it exactly, at forty-six apiece.
 	 */
-	const TRACK_WIDTH = 576;
+	const TRACK_WIDTH = 552;
 	const HEIGHT = 74;
 	const BAR_Y = 10;
 	const BAR_H = 30;
@@ -164,21 +165,22 @@
 		</g>
 	{/if}
 
-	<!-- A day too long for the track runs off the end rather than squeezing it.
-	     In its own clear space and in the pointing colour, because an overflowing
-	     day fills the track and a red mark against a red bar cannot be seen. The
-	     clock above says how much there really is. -->
-	{#if overflow}
-		<g
-			stroke={INDICATOR}
-			stroke-width="3"
-			fill="none"
-			stroke-linecap="round"
-			stroke-linejoin="round"
+	<!-- A day too long for the track runs off the end rather than squeezing it,
+	     and says by how much. In its own clear space and in the pointing colour,
+	     because an overflowing day fills the track and a red mark against a red
+	     bar cannot be seen. Words rather than an arrow: it costs the same room
+	     and answers the question an arrow only raises. -->
+	{#if overflowLabel !== ''}
+		<text
+			x={TRACK_WIDTH + 8}
+			y={MID_Y}
+			fill={INDICATOR}
+			font-size="13"
+			font-weight="600"
+			dominant-baseline="middle"
 		>
-			<path d="M {TRACK_WIDTH + 8} {MID_Y - 7} l 7 7 l -7 7" />
-			<path d="M {TRACK_WIDTH + 17} {MID_Y - 7} l 7 7 l -7 7" />
-		</g>
+			{overflowLabel}
+		</text>
 	{/if}
 
 	<g fill="#a3a3a3" font-size="12" text-anchor="middle">
