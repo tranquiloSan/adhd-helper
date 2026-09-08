@@ -37,7 +37,6 @@
 </script>
 
 <svelte:head>
-	<title>Notes - adhd-helper</title>
 	<meta name="description" content="Somewhere to put a thought before it goes." />
 </svelte:head>
 

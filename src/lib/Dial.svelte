@@ -2,9 +2,12 @@
 	import {
 		DIAL_CENTRE,
 		DIAL_SIZE,
+		FACE_MINUTES,
+		RIM_SEGMENTS,
 		faceLayout,
 		minutesFromPoint,
 		polarPoint,
+		rimSegmentPath,
 		wedgePath
 	} from '$lib/dial-geometry';
 
@@ -12,13 +15,12 @@
 		/** How much of the face to fill, 0 to 1. The countdown drains it; the
 		 *  elapsed display fills it. */
 		fraction: number;
-		/** Range the face is laid out for. May exceed an hour, in which case the
-		 *  per-minute detail is dropped. */
-		faceMinutes: number;
-		/** Furthest a drag may reach, and the slider's maximum. */
-		dragMaxMinutes: number;
 		/** Minutes the dial currently represents, for assistive tech. */
 		valueMinutes: number;
+		/** Whole hours on the rim, 0 to 12. Hours still to come on the countdown,
+		 *  hours already spent on the elapsed display - each pointing the same way
+		 *  as its own wedge. Zero leaves the rim plain. */
+		rimHours?: number;
 		wedgeColour?: string;
 		/** Turns the rim red. An empty face alone reads no differently from an
 		 *  unstarted one. */
@@ -29,9 +31,8 @@
 
 	let {
 		fraction,
-		faceMinutes,
-		dragMaxMinutes,
 		valueMinutes,
+		rimHours = 0,
 		wedgeColour = '#dc2626',
 		finished = false,
 		interactive = false,
@@ -42,16 +43,36 @@
 	const CENTRE = DIAL_CENTRE;
 	const RADIUS = 138;
 	const LABEL_RADIUS = RADIUS - 21;
+	/** The hour slots sit outside the disc. Drawn on the disc's own rim they
+	 *  would be ink on a near-black page on one side and lost under a full wedge
+	 *  on the other; out here each slot has the background to stand against. */
+	const HOUR_RADIUS = RADIUS + 7;
 
 	const FACE = '#f2ece0';
 	const INK = '#1c1917';
+	/** The unlit part of the hour ring: present enough to be a scale, quiet
+	 *  enough not to compete with the face. */
+	const TRACK = '#525252';
 
 	let svg: SVGSVGElement | null = null;
 	let dragging = $state(false);
 
 	const clamped = $derived(Math.min(1, Math.max(0, fraction)));
 	const wedge = $derived(wedgePath(clamped, RADIUS, CENTRE));
-	const layout = $derived(faceLayout(faceMinutes));
+	const layout = faceLayout();
+
+	/** The hour ring appears only when it has something to say. An hour or less
+	 *  leaves the dial exactly as it has always been. */
+	const hours = $derived(Math.min(RIM_SEGMENTS, Math.max(0, Math.round(rimHours))));
+	const slots = $derived(
+		hours === 0
+			? []
+			: Array.from({ length: RIM_SEGMENTS }, (_, i) => ({
+					index: i,
+					path: rimSegmentPath(i, HOUR_RADIUS, CENTRE),
+					lit: i < hours
+				}))
+	);
 
 	/** Turn a pointer position into whole minutes on the dial. */
 	function minutesAt(clientX: number, clientY: number): number {
@@ -61,7 +82,7 @@
 		return minutesFromPoint(
 			((clientX - rect.left) / rect.width) * SIZE,
 			((clientY - rect.top) / rect.height) * SIZE,
-			dragMaxMinutes,
+			FACE_MINUTES,
 			CENTRE
 		);
 	}
@@ -96,7 +117,7 @@
 		if (delta === 0) return;
 
 		event.preventDefault();
-		const next = Math.min(dragMaxMinutes, Math.max(1, valueMinutes + delta));
+		const next = Math.min(FACE_MINUTES, Math.max(1, valueMinutes + delta));
 		onSetMinutes?.(next);
 	}
 </script>
@@ -112,7 +133,7 @@
 	aria-label="Timer duration in minutes"
 	aria-disabled={!interactive}
 	aria-valuemin={1}
-	aria-valuemax={dragMaxMinutes}
+	aria-valuemax={Math.max(FACE_MINUTES, valueMinutes)}
 	aria-valuenow={valueMinutes}
 	onpointerdown={onPointerDown}
 	onpointermove={onPointerMove}
@@ -160,4 +181,16 @@
 		stroke-width={finished ? 8 : 6}
 		opacity="0.9"
 	/>
+
+	<!-- One slot per hour, outside the disc, its boundaries landing on the printed
+	     numbers - twelve of each, so the face reads minutes and the ring reads
+	     hours. Unlit slots stay drawn, so the lit ones are a position on a scale
+	     rather than a row to be counted. -->
+	{#if slots.length > 0}
+		<g fill="none" stroke-width="4" stroke-linecap="butt">
+			{#each slots as slot (slot.index)}
+				<path d={slot.path} stroke={slot.lit ? wedgeColour : TRACK} opacity={slot.lit ? 1 : 0.42} />
+			{/each}
+		</g>
+	{/if}
 </svg>

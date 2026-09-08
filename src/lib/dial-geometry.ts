@@ -3,6 +3,16 @@ export const DIAL_SIZE = 300;
 export const DIAL_CENTRE = DIAL_SIZE / 2;
 
 /**
+ * The dial's span in minutes. One hour, always, on both tools.
+ *
+ * A face that changes size is a face that means something different each time
+ * it changes, which is the one thing a face must not do - see
+ * `docs/adr/0005-the-dial-face-is-fixed-at-an-hour.md`. Anything longer than
+ * the face is counted on the rim instead.
+ */
+export const FACE_MINUTES = 60;
+
+/**
  * An SVG path for the wedge covering `fraction` of the dial, sweeping clockwise
  * from 12 o'clock. Returns an empty string when there is nothing to draw.
  */
@@ -34,6 +44,44 @@ export function wedgePath(fraction: number, radius: number, centre: number = DIA
 }
 
 /**
+ * Hour slots on the rim.
+ *
+ * Twelve, for two reasons that happen to agree: a boundary then lands on every
+ * printed number, so the slots sit on anchors the eye already uses, and one lap
+ * of the rim is twelve hours. The face reads minutes and the rim reads hours,
+ * which is the division an analogue clock already makes.
+ */
+export const RIM_SEGMENTS = 12;
+
+/** Degrees of blank between one slot and the next, so the rim reads as separate
+ *  marks rather than one ring. */
+const RIM_GAP_DEGREES = 4;
+
+/**
+ * An SVG path for one hour slot on the rim.
+ *
+ * Open rather than closed, and meant to be stroked: the rim is a line, unlike
+ * the wedge, which is a filled pie drawn from the centre. A slot spans a
+ * twelfth of the circle, so it can never be the long way round and the large-arc
+ * flag is always zero.
+ */
+export function rimSegmentPath(
+	index: number,
+	radius: number,
+	centre: number = DIAL_CENTRE,
+	gapDegrees: number = RIM_GAP_DEGREES
+): string {
+	const span = 360 / RIM_SEGMENTS;
+	const from = index * span + gapDegrees / 2;
+	const to = (index + 1) * span - gapDegrees / 2;
+
+	const start = polarPoint(from, radius, centre);
+	const end = polarPoint(to, radius, centre);
+
+	return `M ${start.x} ${start.y} A ${radius} ${radius} 0 0 1 ${end.x} ${end.y}`;
+}
+
+/**
  * Whole minutes for a point on the dial, measured clockwise from 12 o'clock.
  *
  * Straight up is `maxMinutes` rather than zero: the top of the dial is a full
@@ -43,7 +91,7 @@ export function wedgePath(fraction: number, radius: number, centre: number = DIA
 export function minutesFromPoint(
 	x: number,
 	y: number,
-	maxMinutes: number,
+	maxMinutes: number = FACE_MINUTES,
 	centre: number = DIAL_CENTRE
 ): number {
 	const dx = x - centre;
@@ -57,86 +105,24 @@ export function minutesFromPoint(
 	return minutes === 0 ? maxMinutes : minutes;
 }
 
-/**
- * Every face the dial can wear, each a length that divides into round marks.
- *
- * A typed length longer than the current face is rounded up to the next one
- * rather than becoming a face of its own. That keeps the face a round number -
- * so its marks are round too - and it is the same bargain a 30 minute face
- * already offers: 25 minutes covers 25/30 of the circle and the face stays 30.
- */
-export const FACE_LADDER = [30, 60, 90, 120, 150, 180, 240, 300, 360, 480, 600] as const;
-export type FaceMinutes = (typeof FACE_LADDER)[number];
-
-/** The longest face there is, and so the longest length worth accepting. */
-export const MAX_FACE_MINUTES = FACE_LADDER[FACE_LADDER.length - 1];
-
-/** The faces offered as buttons. The rest are only reached by typing a longer
- *  length, but stay switchable back to these at any point. */
-export const FACE_OPTIONS = [30, 60] as const;
-
-/** The smallest face a length fits on. */
-export function faceFor(minutes: number): FaceMinutes {
-	return FACE_LADDER.find((face) => face >= minutes) ?? MAX_FACE_MINUTES;
-}
-
 export type FaceMark = { minutes: number; degrees: number; major: boolean };
 export type FaceNumber = { minutes: number; degrees: number; label: string };
 
-/** Numbers are printed every five minutes, whatever the range. */
+/** Numbers are printed every five minutes, which is what makes twelve of them. */
 const NUMBER_STEP = 5;
 
-/** Intervals a stretched face's marks may fall on, finest first. */
-const FACE_STEPS = [5, 10, 15, 20, 30, 60] as const;
-
-/** About as many marks as an hour face carries numbers. */
-const MAX_STRETCHED_MARKS = 12;
-
 /**
- * The interval a stretched face is marked at: the finest round one that does
- * not crowd the rim.
+ * Marks and numbers for the face: one mark per minute, every fifth longer, and
+ * a number every five minutes.
  *
- * Dividing the circle into a fixed number of parts instead would put the marks
- * at whatever the length divides into - 7.5 and 22.5 on a ninety - and the job
- * of a number on a dial is to be a position you recognise. 15, 30, 45 can be
- * read at a glance; 8, 23, 38 cannot, however exact each one is.
+ * Per-minute detail is legible because the face is an hour and stays one. The
+ * numbers exist to be positions you recognise - 15, 30, 45 can be read at a
+ * glance - and they only stay recognisable because they never move.
  */
-function stretchedStep(faceMinutes: number): number {
-	const fits = FACE_STEPS.find((step) => Math.floor(faceMinutes / step) <= MAX_STRETCHED_MARKS);
-	if (fits !== undefined) return fits;
+export function faceLayout(): { marks: FaceMark[]; numbers: FaceNumber[] } {
+	const degreesPerMinute = 360 / FACE_MINUTES;
 
-	// Longer than the ladder covers: the nearest half hour that still fits.
-	const HALF_HOUR = 30;
-	return Math.ceil(faceMinutes / MAX_STRETCHED_MARKS / HALF_HOUR) * HALF_HOUR;
-}
-
-/**
- * Marks and numbers for a face of the given range: one mark per minute, every
- * fifth longer, and a number every five minutes.
- *
- * Per-minute detail only stays legible up to an hour. A longer duration
- * rescales the face to fit and is marked at a round interval instead, every
- * mark numbered. The interval divides the length rather than the circle, so a
- * length that is not a multiple of it leaves the top of the dial unnumbered -
- * which costs nothing, because the exact length is already the clock beneath.
- */
-export function faceLayout(faceMinutes: number): { marks: FaceMark[]; numbers: FaceNumber[] } {
-	const degreesPerMinute = 360 / faceMinutes;
-
-	if (faceMinutes > 60) {
-		const step = stretchedStep(faceMinutes);
-		const stops = Array.from({ length: Math.floor(faceMinutes / step) }, (_, i) => {
-			const minutes = (i + 1) * step;
-			return { minutes, degrees: minutes * degreesPerMinute };
-		});
-
-		return {
-			marks: stops.map((stop) => ({ ...stop, major: true })),
-			numbers: stops.map((stop) => ({ ...stop, label: String(stop.minutes) }))
-		};
-	}
-
-	const marks = Array.from({ length: faceMinutes }, (_, i) => {
+	const marks = Array.from({ length: FACE_MINUTES }, (_, i) => {
 		const minutes = i + 1;
 		return {
 			minutes,
@@ -145,7 +131,7 @@ export function faceLayout(faceMinutes: number): { marks: FaceMark[]; numbers: F
 		};
 	});
 
-	const numbers = Array.from({ length: Math.floor(faceMinutes / NUMBER_STEP) }, (_, i) => {
+	const numbers = Array.from({ length: FACE_MINUTES / NUMBER_STEP }, (_, i) => {
 		const minutes = (i + 1) * NUMBER_STEP;
 		return { minutes, degrees: minutes * degreesPerMinute, label: String(minutes) };
 	});

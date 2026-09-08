@@ -186,3 +186,119 @@ describe('elapsed accounts for every moment since it started', () => {
 		expect(accountedTo(elapsed)).toBe(T0 + 90 * MINUTE);
 	});
 });
+
+/**
+ * The account: the same stretch the counters describe, itemised. The counters
+ * stay the authority on the totals, so what matters here is that the periods
+ * line up with them and that a stretch stored before the account existed still
+ * survives a reload.
+ */
+describe('the account of a stretch', () => {
+	it('opens a worked period when the stretch starts', () => {
+		const elapsed = new Elapsed();
+		elapsed.start(T0);
+
+		expect(elapsed.segments).toEqual([{ kind: 'work', startedAt: T0, endedAt: null }]);
+	});
+
+	it('closes the worked period and opens a break when paused', () => {
+		const elapsed = new Elapsed();
+		elapsed.start(T0);
+		elapsed.pause(T0 + 20 * MINUTE);
+
+		expect(elapsed.segments).toEqual([
+			{ kind: 'work', startedAt: T0, endedAt: T0 + 20 * MINUTE },
+			{ kind: 'break', startedAt: T0 + 20 * MINUTE, endedAt: null }
+		]);
+	});
+
+	it('closes the break and opens work again on resume', () => {
+		const elapsed = new Elapsed();
+		elapsed.start(T0);
+		elapsed.pause(T0 + 20 * MINUTE);
+		elapsed.resume(T0 + 32 * MINUTE);
+
+		expect(elapsed.segments).toHaveLength(3);
+		expect(elapsed.segments.at(-2)).toEqual({
+			kind: 'break',
+			startedAt: T0 + 20 * MINUTE,
+			endedAt: T0 + 32 * MINUTE
+		});
+		expect(elapsed.segments.at(-1)).toEqual({
+			kind: 'work',
+			startedAt: T0 + 32 * MINUTE,
+			endedAt: null
+		});
+	});
+
+	it('itemises the same breaks the counters total up', () => {
+		const elapsed = new Elapsed();
+		elapsed.start(T0);
+		elapsed.pause(T0 + 20 * MINUTE);
+		elapsed.resume(T0 + 32 * MINUTE);
+		elapsed.pause(T0 + 50 * MINUTE);
+		elapsed.resume(T0 + 55 * MINUTE);
+
+		const breaks = elapsed.segments.filter((segment) => segment.kind === 'break');
+		const total = breaks.reduce((sum, b) => sum + ((b.endedAt ?? 0) - b.startedAt), 0);
+
+		expect(breaks).toHaveLength(elapsed.breakCount);
+		expect(total).toBe(elapsed.breakMs);
+	});
+
+	it('forgets the account on reset, like the counters', () => {
+		const elapsed = new Elapsed();
+		elapsed.start(T0);
+		elapsed.pause(T0 + 20 * MINUTE);
+		elapsed.reset(T0 + 25 * MINUTE);
+
+		expect(elapsed.segments).toEqual([]);
+	});
+
+	it('survives a round trip through storage', () => {
+		const before = new Elapsed();
+		before.start(T0);
+		before.pause(T0 + 20 * MINUTE);
+
+		const after = new Elapsed();
+		after.restore(
+			JSON.parse(JSON.stringify(before.toSnapshot())) as ElapsedSnapshot,
+			T0 + 30 * MINUTE
+		);
+
+		expect(after.segments).toEqual(before.segments);
+	});
+
+	it('does not hand back a snapshot that later edits can reach into', () => {
+		const elapsed = new Elapsed();
+		elapsed.start(T0);
+
+		const snapshot = elapsed.toSnapshot();
+		elapsed.pause(T0 + 20 * MINUTE);
+
+		expect(snapshot.segments).toHaveLength(1);
+		expect(snapshot.segments?.[0].endedAt).toBeNull();
+	});
+
+	// The regression that matters: the account arrived last, so a stored stretch
+	// without one is an older version, not a broken snapshot. Rejecting it would
+	// drop a stretch that is still running.
+	it('keeps a stretch from before the account existed, and just has nothing to itemise', () => {
+		const legacy: ElapsedSnapshot = {
+			status: 'running',
+			startedAt: T0,
+			accumulatedMs: 0,
+			firstStartedAt: T0,
+			pausedAt: null,
+			breakMs: 0,
+			breakCount: 0
+		};
+
+		const elapsed = new Elapsed();
+		elapsed.restore(legacy, T0 + 40 * MINUTE);
+
+		expect(elapsed.status).toBe('running');
+		expect(elapsed.elapsedMs).toBe(40 * MINUTE);
+		expect(elapsed.segments).toEqual([]);
+	});
+});

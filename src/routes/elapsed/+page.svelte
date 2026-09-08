@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
+	import AccountOverlay from '$lib/AccountOverlay.svelte';
 	import Dial from '$lib/Dial.svelte';
+	import { FACE_MINUTES, RIM_SEGMENTS } from '$lib/dial-geometry';
 	import { DEFAULT_THRESHOLD_MINUTES, elapsed } from '$lib/elapsed.svelte';
 	import { formatApproximate, formatDuration, formatTimeWithDay } from '$lib/format';
 	import { loadThresholdMinutes, saveThresholdMinutes } from '$lib/persistence';
 
-	/** The elapsed dial always uses an hour face and laps past it. */
-	const FACE_MINUTES = 60;
+	let accountOpen = $state(false);
 
 	let thresholdMinutes = $state(DEFAULT_THRESHOLD_MINUTES);
 
@@ -60,15 +61,21 @@
 	const laps = $derived(Math.floor(elapsedMinutes / FACE_MINUTES));
 	const fraction = $derived((elapsedMinutes % FACE_MINUTES) / FACE_MINUTES);
 
-	/** Warms as a stretch gets long. Visible if you glance, invisible if you
-	 *  don't - the display never interrupts. */
-	const wedgeColour = $derived(
-		elapsedMinutes >= thresholdMinutes * 2
-			? '#dc2626'
-			: elapsedMinutes >= thresholdMinutes
-				? '#ea580c'
-				: '#0d9488'
-	);
+	/** The same hours, on the rim, lapping every twelve the way the face laps
+	 *  every one. The caption still says the absolute count in words, so nothing
+	 *  is lost when the rim comes round. */
+	const rimHours = $derived(laps % RIM_SEGMENTS);
+
+	/**
+	 * Warms once a stretch runs long. Visible if you glance, invisible if you
+	 * don't - the display never interrupts.
+	 *
+	 * One step, not two. Colour used to carry magnitude as well, which it was bad
+	 * at and which capped out after a couple of hours; the rim counts now, so
+	 * colour is back to answering one question - have you been at this too long -
+	 * and the threshold is the only thing that decides it.
+	 */
+	const wedgeColour = $derived(elapsedMinutes >= thresholdMinutes ? '#ea580c' : '#0d9488');
 
 	const caption = $derived.by(() => {
 		switch (elapsed.status) {
@@ -109,7 +116,6 @@
 </script>
 
 <svelte:head>
-	<title>{elapsed.status === 'running' ? `${clock} elapsed` : 'Elapsed'} - adhd-helper</title>
 	<meta
 		name="description"
 		content="Counts up, so you can see how long you have been at something."
@@ -117,21 +123,33 @@
 </svelte:head>
 
 <main class="mx-auto flex w-full max-w-3xl flex-col items-center justify-center gap-6 px-6 py-4">
-	<Dial
-		{fraction}
-		faceMinutes={FACE_MINUTES}
-		dragMaxMinutes={FACE_MINUTES}
-		valueMinutes={Math.round(elapsedMinutes)}
-		{wedgeColour}
-	/>
+	<Dial {fraction} {rimHours} valueMinutes={Math.round(elapsedMinutes)} {wedgeColour} />
 
 	<div class="grid place-items-center gap-1">
 		<span class="text-7xl font-semibold tracking-tight text-neutral-50 tabular-nums">{clock}</span>
 		<span class="text-sm text-neutral-400" aria-live="polite">{caption}</span>
 		{#if account !== ''}
-			<span class="text-xs text-neutral-500">{account}</span>
+			<span class="flex items-center gap-2 text-xs text-neutral-500">
+				{account}
+				<!-- The itemised version of the line to its left. Behind a button and
+				     on this page only: a list of rows turns a glance into reading, so
+				     it has to be somewhere you go rather than something you see. -->
+				{#if elapsed.segments.length > 1}
+					<button
+						type="button"
+						onclick={() => (accountOpen = true)}
+						class="rounded-full border border-neutral-800 px-2 py-0.5 transition hover:border-neutral-600"
+					>
+						Itemise
+					</button>
+				{/if}
+			</span>
 		{/if}
 	</div>
+
+	{#if accountOpen}
+		<AccountOverlay onclose={() => (accountOpen = false)} />
+	{/if}
 
 	<div class="flex flex-col items-center gap-5">
 		<label class="flex items-center gap-2 text-xs text-neutral-500">
@@ -171,8 +189,8 @@
 
 	<p class="max-w-prose text-center text-xs leading-relaxed text-neutral-500">
 		Counts up with no target and no alarm, so it can tell you how long you have been at something
-		without breaking the focus it took to get there. The wedge fills each hour and starts again; the
-		colour warms once a stretch runs long.
+		without breaking the focus it took to get there. The wedge fills each hour and starts again, and
+		each whole hour is marked on the rim; the colour warms once a stretch runs long.
 	</p>
 
 	<p class="max-w-prose text-center text-xs leading-relaxed text-neutral-500">

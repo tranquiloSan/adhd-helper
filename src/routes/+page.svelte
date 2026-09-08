@@ -1,65 +1,66 @@
 <script lang="ts">
-	import { browser } from '$app/environment';
 	import { Alarm } from '$lib/alarm';
 	import Dial from '$lib/Dial.svelte';
-	import { formatApproximate, formatDuration } from '$lib/format';
+	import { RIM_SEGMENTS } from '$lib/dial-geometry';
+	import { formatApproximate, formatDuration, formatTimeWithDay } from '$lib/format';
 	import { isTypingTarget } from '$lib/keyboard';
-	import { FACE_OPTIONS, MAX_FACE_MINUTES, faceFor, type FaceMinutes } from '$lib/dial-geometry';
-	import { loadFaceMinutes, loadSnapshot, saveFaceMinutes, saveSnapshot } from '$lib/persistence';
-	import { PRESET_MINUTES, Timer, parseLengthMinutes } from '$lib/timer.svelte';
+	import { MAX_LENGTH_MINUTES, PRESET_MINUTES, parseLengthMinutes, timer } from '$lib/timer.svelte';
 
-	const timer = new Timer();
-	const alarm = new Alarm();
-
-	const DEFAULT_FACE: FaceMinutes = 30;
-
-	// Restored during component init rather than in an effect, so the persisting
-	// effect below cannot write the default state over the stored one first.
-	let faceMinutes = $state<FaceMinutes>(DEFAULT_FACE);
-
-	if (browser) {
-		const snapshot = loadSnapshot();
-		if (snapshot !== null) timer.restore(snapshot);
-
-		// A stored duration can be longer than the stored face, because it could
-		// be before faces grew to fit. Reconciled once here rather than derived
-		// for ever, so the face stays a fixed thing a drag cannot rescale.
-		const storedFace = loadFaceMinutes() ?? DEFAULT_FACE;
-		faceMinutes = faceFor(Math.max(storedFace, Math.ceil(timer.durationMs / 60_000)));
-	}
+	const HOUR_MS = 3_600_000;
 
 	let customLength = $state('');
 
 	const clock = $derived(formatDuration(timer.remainingMs));
 
 	/**
-	 * A real Time Timer has a fixed face: on a 30-minute face, 25 minutes covers
-	 * 25/30 of the circle, so a given amount of red always means the same amount
-	 * of time.
+	 * Whole hours still to come, shown on the rim, and the part of the current
+	 * hour left on the face.
 	 *
-	 * The face is therefore held, never derived from the duration. Deriving it
-	 * would rescale the face under the pointer mid-drag - the wedge being aimed
-	 * at would move as it was dragged - and would lose the property above, which
-	 * is the whole point of having a face.
+	 * The face is a fixed hour and stays one, so a given amount of red always
+	 * means the same amount of time - which is the property a face exists for and
+	 * the one a resizing face quietly destroys. Anything longer is counted on the
+	 * rim instead of stretching the face to hold it.
 	 */
-	const filled = $derived(timer.remainingMs / 60_000 / faceMinutes);
+	const rimHours = $derived(Math.max(0, Math.ceil(timer.remainingMs / HOUR_MS) - 1) % RIM_SEGMENTS);
+	const filled = $derived((timer.remainingMs - rimHours * HOUR_MS) / HOUR_MS);
+
 	/** The duration is locked once started; only a reset unlocks it. */
 	const editable = $derived(timer.status === 'idle');
 
-	/** A face grown to fit a typed length, rather than one of the two offered.
-	 *  Still a face: draggable, and switchable back with the buttons. */
-	const grown = $derived(!FACE_OPTIONS.some((option) => option === faceMinutes));
+	// Only the end time depends on this, and that is a clock time, so a second is
+	// plenty. Not needed once running: the timer knows its own end exactly.
+	let now = $state(Date.now());
+
+	$effect(() => {
+		if (timer.status === 'running' || timer.status === 'finished') return;
+		const tick = () => (now = Date.now());
+		const id = setInterval(tick, 1000);
+		window.addEventListener('focus', tick);
+		return () => {
+			clearInterval(id);
+			window.removeEventListener('focus', tick);
+		};
+	});
 
 	/**
-	 * The smallest face the current length fits on.
+	 * When it lands, in wall-clock time.
 	 *
-	 * Ceiling rather than rounding, because a length of 60.5 does not fit on a
-	 * 60 face - it needs the next one up.
+	 * "25 minutes" does not tell you whether it clears the thing at three o'clock,
+	 * which is exactly the arithmetic this tool exists to save you - the same
+	 * argument the day already makes with its preview. Qualified with the day,
+	 * because a long length can cross midnight and a bare 00:40 beside a running
+	 * clock reads as this morning.
 	 */
-	const smallestFace = $derived(faceFor(Math.ceil(timer.durationMs / 60_000)));
-	/** Offered only when it would move: a control that never does anything is
-	 *  noise, and pressing 30 or 60 clamps the length whereas this does not. */
-	const canFit = $derived(smallestFace < faceMinutes);
+	const landing = $derived.by(() => {
+		const endsAt =
+			timer.status === 'running' || timer.status === 'finished'
+				? timer.endsAt
+				: now + timer.remainingMs;
+		if (endsAt === null) return '';
+
+		const at = formatTimeWithDay(endsAt, now);
+		return timer.status === 'finished' ? `Ran out at ${at}` : `Ends ${at}`;
+	});
 
 	const caption = $derived.by(() => {
 		switch (timer.status) {
@@ -76,56 +77,6 @@
 		}
 	});
 
-	const pageTitle = $derived(
-		timer.status === 'finished'
-			? 'Time is up - adhd-helper'
-			: timer.status === 'running'
-				? `${clock} - adhd-helper`
-				: 'Timer - adhd-helper'
-	);
-
-	// The interval only advances the timer's idea of "now"; it never accumulates
-	// elapsed time, so throttling in a background tab cannot make it drift.
-	$effect(() => {
-		if (timer.status !== 'running') return;
-		const id = setInterval(() => timer.sync(), 100);
-		return () => clearInterval(id);
-	});
-
-	// A throttled tab can be seconds behind, so catch up the moment it is looked at.
-	$effect(() => {
-		const resync = () => timer.sync();
-		document.addEventListener('visibilitychange', resync);
-		window.addEventListener('focus', resync);
-		return () => {
-			document.removeEventListener('visibilitychange', resync);
-			window.removeEventListener('focus', resync);
-		};
-	});
-
-	$effect(() => {
-		saveSnapshot(timer.toSnapshot());
-	});
-
-	$effect(() => {
-		saveFaceMinutes(faceMinutes);
-	});
-
-	// Cleanup runs when the status changes away from finished, which is what
-	// stops the alarm when it is dismissed.
-	$effect(() => {
-		if (timer.status !== 'finished') return;
-		alarm.start('Your timer has finished.');
-		return () => alarm.stop();
-	});
-
-	$effect(() => {
-		if (timer.status !== 'running') return;
-		const warn = (event: BeforeUnloadEvent) => event.preventDefault();
-		window.addEventListener('beforeunload', warn);
-		return () => window.removeEventListener('beforeunload', warn);
-	});
-
 	$effect(() => {
 		const onKeydown = (event: KeyboardEvent) => {
 			// Don't hijack keys aimed at a field, the dump, or the dial.
@@ -133,7 +84,7 @@
 			if (event.target instanceof SVGElement) return;
 			if (event.code !== 'Space') return;
 			event.preventDefault();
-			toggle();
+			void toggle();
 		};
 		window.addEventListener('keydown', onKeydown);
 		return () => window.removeEventListener('keydown', onKeydown);
@@ -166,26 +117,7 @@
 	function applyCustomLength() {
 		const typed = parseLengthMinutes(customLength);
 		if (typed === null) return;
-
-		// Clamped to the longest face, so a length always has a face that fits.
-		const minutes = Math.min(typed, MAX_FACE_MINUTES);
-		timer.setDurationMs(minutes * 60_000);
-		// Grown to the next round face rather than to the length itself, so the
-		// marks stay round - and left there, so the buttons can put it back.
-		if (minutes > faceMinutes) faceMinutes = faceFor(minutes);
-	}
-
-	function setFace(minutes: FaceMinutes) {
-		faceMinutes = minutes;
-		// A duration longer than the new face could not be dragged back down, so
-		// bring it inside the range.
-		if (timer.durationMs > minutes * 60_000) setMinutes(minutes);
-	}
-
-	/** Shrink the face to the length, rather than the length to a face. Needs no
-	 *  clamp: the smallest face that fits is still one that fits. */
-	function fitFace() {
-		faceMinutes = smallestFace;
+		timer.setDurationMs(Math.min(typed, MAX_LENGTH_MINUTES) * 60_000);
 	}
 
 	const isPreset = (minutes: number) => timer.durationMs === minutes * 60_000;
@@ -202,7 +134,6 @@
 </script>
 
 <svelte:head>
-	<title>{pageTitle}</title>
 	<meta
 		name="description"
 		content="A visual countdown timer for time blindness and hyperfocus overrun."
@@ -212,8 +143,7 @@
 <main class="mx-auto flex w-full max-w-3xl flex-col items-center justify-center gap-6 px-6 py-4">
 	<Dial
 		fraction={filled}
-		{faceMinutes}
-		dragMaxMinutes={faceMinutes}
+		{rimHours}
 		valueMinutes={Math.round(timer.durationMs / 60_000)}
 		finished={timer.status === 'finished'}
 		interactive={editable}
@@ -223,50 +153,12 @@
 	<div class="grid place-items-center gap-1">
 		<span class="text-7xl font-semibold tracking-tight text-neutral-50 tabular-nums">{clock}</span>
 		<span class="text-sm text-neutral-400" aria-live="polite">{caption}</span>
+		{#if landing !== ''}
+			<span class="text-xs text-neutral-500 tabular-nums">{landing}</span>
+		{/if}
 	</div>
 
 	<div class="flex flex-col items-center gap-5">
-		<div class="flex flex-wrap items-center justify-center gap-2 text-xs text-neutral-500">
-			<span>Dial</span>
-			{#each FACE_OPTIONS as option (option)}
-				<button
-					type="button"
-					onclick={() => setFace(option)}
-					disabled={!editable}
-					aria-pressed={faceMinutes === option}
-					class="rounded-full border px-3 py-1 transition disabled:opacity-40
-						{faceMinutes === option
-						? 'border-neutral-400 text-neutral-200'
-						: 'border-neutral-800 text-neutral-500 hover:border-neutral-600'}"
-				>
-					{option} min
-				</button>
-			{/each}
-
-			{#if grown}
-				<!-- The face in use, shown beside the two that can still be picked. -->
-				<span class="inline-flex items-center gap-2">
-					<span
-						class="rounded-full border border-neutral-400 px-3 py-1 text-neutral-200 tabular-nums"
-					>
-						{faceMinutes} min
-					</span>
-					<span>- rounded up to fit what you typed</span>
-				</span>
-			{/if}
-
-			{#if canFit}
-				<button
-					type="button"
-					onclick={fitFace}
-					disabled={!editable}
-					class="rounded-full border border-neutral-800 px-3 py-1 tabular-nums transition hover:border-neutral-600 disabled:opacity-40"
-				>
-					Fit to {smallestFace} min
-				</button>
-			{/if}
-		</div>
-
 		<div class="flex flex-wrap justify-center gap-2">
 			{#each PRESET_MINUTES as minutes (minutes)}
 				<button
@@ -319,11 +211,10 @@
 		</div>
 
 		<p class="max-w-prose text-center text-xs leading-relaxed text-neutral-500">
-			Space starts and pauses. The length is locked once running - reset to change it. Type a length
-			longer than the dial holds and the face grows to the next round size that fits, marked at a
-			round interval instead of every minute. It stays there, and stays draggable, until you pick
-			one of the sizes above again or fit it back down to the length. The custom field takes
-			minutes, or hours with an h - 90, 2h and 1h30 all work.
+			Space starts and pauses. The length is locked once running - reset to change it. Drag the dial
+			for anything up to an hour, or type longer: the custom field takes minutes, or hours with an h
+			- 90, 2h and 1h30 all work. Each whole hour beyond the face is marked on the rim, so the face
+			itself always means an hour and a given amount of red always means the same amount of time.
 		</p>
 	</div>
 

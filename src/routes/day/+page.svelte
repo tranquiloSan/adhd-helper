@@ -91,9 +91,6 @@
 </script>
 
 <svelte:head>
-	<title
-		>{day.status === 'running' ? `${formatDuration(day.remainingMs)} left` : 'Day'} - adhd-helper</title
-	>
 	<meta name="description" content="Time remaining until an end time you name." />
 </svelte:head>
 

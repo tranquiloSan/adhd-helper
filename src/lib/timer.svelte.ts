@@ -5,6 +5,14 @@ export const PRESET_MINUTES = [5, 10, 25] as const;
 
 export const DEFAULT_DURATION_MS = 25 * 60_000;
 
+/**
+ * The longest length worth accepting, in minutes.
+ *
+ * A limit on the length, not on the dial: the face is a fixed hour and the rim
+ * counts twelve, so ten hours is comfortably inside what the dial can say.
+ */
+export const MAX_LENGTH_MINUTES = 600;
+
 /** Hours, minutes, or both: "90", "2h", "1h30", "1h30m", "1.5h". */
 const TYPED_LENGTH = /^\s*(?:(\d+(?:\.\d+)?)\s*h)?\s*(?:(\d+(?:\.\d+)?)\s*m?)?\s*$/i;
 
@@ -69,6 +77,12 @@ export class Timer {
 			case 'finished':
 				return 0;
 		}
+	}
+
+	/** The moment it finishes, or null when there is nothing running. Kept after
+	 *  finishing, so "ran out at" can still say when. */
+	get endsAt(): number | null {
+		return this.#endsAt;
 	}
 
 	/** How much of the duration has been spent. */
@@ -165,3 +179,7 @@ export class Timer {
 		}
 	}
 }
+
+/** Shared: the alarm has to fire while another tool is on screen, so the timer
+ *  is driven from the layout rather than from its own page. */
+export const timer = new Timer();
