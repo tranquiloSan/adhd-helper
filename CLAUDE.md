@@ -15,6 +15,10 @@ Issues live as GitHub issues, managed via the `gh` CLI. See `docs/agents/issue-t
 
 The five canonical triage roles, used verbatim as label strings. See `docs/agents/triage-labels.md`.
 
+### Commit messages
+
+The log carries the decisions that left no trace in the code. See `docs/agents/commits.md`.
+
 ### Domain docs
 
 Single-context: `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
