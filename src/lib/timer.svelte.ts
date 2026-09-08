@@ -8,10 +8,12 @@ export const DEFAULT_DURATION_MS = 25 * 60_000;
 /**
  * The longest length worth accepting, in minutes.
  *
- * A limit on the length, not on the dial: the face is a fixed hour and the rim
- * counts twelve, so ten hours is comfortably inside what the dial can say.
+ * One full lap of the ring, which is twelve hours. Taking the limit from what
+ * the dial can draw rather than picking a round number is what keeps every slot
+ * reachable: a shorter cap would leave the last slots permanently dead, pointed
+ * at and refusing to answer.
  */
-export const MAX_LENGTH_MINUTES = 600;
+export const MAX_LENGTH_MINUTES = 12 * 60;
 
 /** Hours, minutes, or both: "90", "2h", "1h30", "1h30m", "1.5h". */
 const TYPED_LENGTH = /^\s*(?:(\d+(?:\.\d+)?)\s*h)?\s*(?:(\d+(?:\.\d+)?)\s*m?)?\s*$/i;

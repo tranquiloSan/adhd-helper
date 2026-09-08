@@ -27,7 +27,10 @@
 	 */
 	const wholeHours = $derived(Math.max(0, Math.ceil(timer.remainingMs / HOUR_MS) - 1));
 	const filled = $derived((timer.remainingMs - wholeHours * HOUR_MS) / HOUR_MS);
-	const rimHours = $derived((timer.remainingMs / HOUR_MS) % RIM_SEGMENTS);
+	// Clamped rather than lapped, unlike the elapsed count: a length cannot
+	// outrun the ring, because the ring is what decides how long a length may be.
+	// A full ring means the longest timer there is, never a wrap back to nothing.
+	const rimHours = $derived(Math.min(RIM_SEGMENTS, timer.remainingMs / HOUR_MS));
 
 	/** The duration is locked once started; only a reset unlocks it. */
 	const editable = $derived(timer.status === 'idle');

@@ -82,6 +82,14 @@ it is the one a physical dial would have offered anyway - keep going round and
 the length grows, turn back and it shrinks, with a floor at zero and a ceiling at
 the longest length.
 
+That ceiling is one full lap of the ring, twelve hours, and it is taken from the
+ring rather than chosen. It was ten to begin with, which left the last two slots
+permanently dead - pointed at, and refusing to answer. A control that draws
+twelve positions has to accept twelve. The countdown's ring therefore clamps
+where the elapsed count's laps: a length cannot outrun the ring, because the ring
+is what decides how long a length may be, so a full ring means the longest timer
+there is rather than a wrap back to nothing.
+
 Two details the ring needs to be usable. Which half a drag is working is decided
 when it starts and held for its whole life, because a face drag is allowed to
 stray off the disc - that is how you reach the last minute of an hour - and must
