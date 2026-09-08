@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
 	DIAL_CENTRE,
-	FACE_LADDER,
-	MAX_FACE_MINUTES,
-	faceFor,
+	FACE_MINUTES,
+	RIM_SEGMENTS,
+	degreesFromPoint,
 	faceLayout,
+	minutesFromDegrees,
 	minutesFromPoint,
 	polarPoint,
+	rimSegmentPath,
 	wedgePath
 } from './dial-geometry';
 
@@ -63,77 +65,63 @@ describe('minutesFromPoint', () => {
 	});
 });
 
-describe('faceLayout', () => {
-	it('marks every minute of a thirty minute face, numbering every fifth', () => {
-		const { marks, numbers } = faceLayout(30);
-		expect(marks).toHaveLength(30);
-		expect(numbers.map((n) => n.minutes)).toEqual([5, 10, 15, 20, 25, 30]);
+describe('degreesFromPoint', () => {
+	it('reads the top of the dial as zero', () => {
+		expect(degreesFromPoint(C, C - 50, C)).toBeCloseTo(0);
 	});
 
-	it('marks every minute of an hour face, numbering every fifth', () => {
-		const { marks, numbers } = faceLayout(60);
+	it('grows clockwise: right is a quarter turn, bottom a half, left three quarters', () => {
+		expect(degreesFromPoint(C + 50, C, C)).toBeCloseTo(90);
+		expect(degreesFromPoint(C, C + 50, C)).toBeCloseTo(180);
+		expect(degreesFromPoint(C - 50, C, C)).toBeCloseTo(270);
+	});
+
+	it('never returns a full turn, so a wind past the top always reads as small', () => {
+		// Just anticlockwise of the top, which is what a drag sees the instant
+		// before it crosses.
+		expect(degreesFromPoint(C - 1, C - 50, C)).toBeGreaterThan(270);
+		expect(degreesFromPoint(C + 1, C - 50, C)).toBeLessThan(90);
+	});
+
+	it('ignores distance from the centre, so a drag off the disc still tracks', () => {
+		expect(degreesFromPoint(C + 5, C, C)).toBeCloseTo(degreesFromPoint(C + 5000, C, C));
+	});
+});
+
+describe('minutesFromDegrees', () => {
+	it('reads the top as a full face, not zero', () => {
+		expect(minutesFromDegrees(0)).toBe(60);
+		expect(minutesFromDegrees(360)).toBe(60);
+	});
+
+	it('snaps to whole minutes', () => {
+		expect(minutesFromDegrees(90)).toBe(15);
+		expect(minutesFromDegrees(91)).toBe(15);
+		expect(minutesFromDegrees(180)).toBe(30);
+	});
+});
+
+describe('faceLayout', () => {
+	it('marks every minute of the hour face, numbering every fifth', () => {
+		const { marks, numbers } = faceLayout();
 		expect(marks).toHaveLength(60);
 		expect(numbers.map((n) => n.minutes)).toEqual([5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60]);
 	});
 
 	it('puts the last number at the top of the dial', () => {
-		const { numbers } = faceLayout(30);
+		const { numbers } = faceLayout();
 		expect(numbers.at(-1)?.degrees).toBe(360);
 	});
 
-	it('drops per-minute detail past an hour, where it would be unreadable', () => {
-		const { marks } = faceLayout(90);
-		expect(marks.length).toBeLessThan(90);
-		expect(marks.every((mark) => mark.major)).toBe(true);
+	it('numbers as many positions as the rim has hour slots, so the two line up', () => {
+		expect(faceLayout().numbers).toHaveLength(RIM_SEGMENTS);
 	});
 
-	it('numbers a stretched face at a round interval, never a fraction', () => {
-		expect(faceLayout(90).numbers.map((n) => n.label)).toEqual([
-			'10',
-			'20',
-			'30',
-			'40',
-			'50',
-			'60',
-			'70',
-			'80',
-			'90'
+	it('marks every fifth minute as major, which is where the numbers go', () => {
+		const { marks } = faceLayout();
+		expect(marks.filter((mark) => mark.major).map((mark) => mark.minutes)).toEqual([
+			5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60
 		]);
-		expect(faceLayout(150).numbers.map((n) => n.label)).toEqual([
-			'15',
-			'30',
-			'45',
-			'60',
-			'75',
-			'90',
-			'105',
-			'120',
-			'135',
-			'150'
-		]);
-	});
-
-	it('coarsens the interval as the face grows, rather than crowding the rim', () => {
-		const step = (faceMinutes: number) => faceLayout(faceMinutes).numbers[0].minutes;
-		expect(step(61)).toBe(5);
-		expect(step(90)).toBe(10);
-		expect(step(150)).toBe(15);
-		expect(step(200)).toBe(20);
-		expect(step(600)).toBe(60);
-
-		for (const faceMinutes of [61, 90, 100, 120, 150, 200, 360, 600, 1500]) {
-			expect(faceLayout(faceMinutes).numbers.length).toBeLessThanOrEqual(12);
-		}
-	});
-
-	it('puts the last number at the top when the length is a multiple of the interval', () => {
-		expect(faceLayout(120).numbers.at(-1)?.degrees).toBe(360);
-	});
-
-	it('leaves the top unnumbered otherwise, since the clock already has the total', () => {
-		const { numbers } = faceLayout(121);
-		expect(numbers.at(-1)?.minutes).toBe(120);
-		expect(numbers.at(-1)?.degrees).toBeLessThan(360);
 	});
 });
 
@@ -150,62 +138,69 @@ describe('polarPoint', () => {
 	});
 });
 
-describe('faceFor', () => {
-	it('leaves a length that already fits', () => {
-		expect(faceFor(25)).toBe(30);
-		expect(faceFor(30)).toBe(30);
-		expect(faceFor(60)).toBe(60);
+describe('rimSegmentPath', () => {
+	/** Pull the two endpoints out of "M x y A r r 0 0 1 x y". */
+	const endpoints = (path: string) => {
+		const n = path.match(/-?\d+(?:\.\d+)?/g)?.map(Number) ?? [];
+		return { start: { x: n[0], y: n[1] }, end: { x: n[7], y: n[8] } };
+	};
+
+	it('starts the first slot at the top of the dial', () => {
+		const { start } = endpoints(rimSegmentPath(0, RADIUS, C, 0));
+		expect(start.x).toBeCloseTo(C);
+		expect(start.y).toBeCloseTo(C - RADIUS);
 	});
 
-	it('rounds up to the next round face rather than fitting the length exactly', () => {
-		expect(faceFor(61)).toBe(90);
-		expect(faceFor(91)).toBe(120);
-		expect(faceFor(121)).toBe(150);
+	it('runs clockwise, so a slot ends further round than it starts', () => {
+		const { start, end } = endpoints(rimSegmentPath(0, RADIUS, C, 0));
+		expect(end.x).toBeGreaterThan(start.x);
 	});
 
-	it('is the smallest rung that fits, which is what the fit button offers', () => {
-		for (const minutes of [1, 25, 30, 31, 60, 61, 90, 91, 120, 121, 200, 400, 600]) {
-			const face = faceFor(minutes);
-			expect(face).toBeGreaterThanOrEqual(minutes);
-			// Nothing smaller on the ladder would have fitted.
-			for (const rung of FACE_LADDER.filter((candidate) => candidate < face)) {
-				expect(rung).toBeLessThan(minutes);
-			}
-		}
+	it('is an open arc, never the long way round', () => {
+		const path = rimSegmentPath(5, RADIUS, C);
+		expect(path).toContain('A');
+		expect(path).not.toContain('Z');
+		// Large-arc flag: a twelfth of a circle can never need it.
+		expect(path).toMatch(/A \d+ \d+ 0 0 1 /);
 	});
 
-	it('stops at the longest face there is', () => {
-		expect(faceFor(MAX_FACE_MINUTES)).toBe(MAX_FACE_MINUTES);
-		expect(faceFor(10_000)).toBe(MAX_FACE_MINUTES);
-	});
-});
+	it('leaves a gap either side rather than eating into the next slot', () => {
+		const gapless = endpoints(rimSegmentPath(0, RADIUS, C, 0));
+		const gapped = endpoints(rimSegmentPath(0, RADIUS, C, 6));
 
-/**
- * The reason a typed length grows the face to the next rung instead of becoming
- * a face of its own: every rung divides into round numbers, so no face the dial
- * can actually wear has a fraction on it.
- */
-describe('every face on the ladder', () => {
-	it('is numbered in whole minutes', () => {
-		for (const face of FACE_LADDER) {
-			for (const number of faceLayout(face).numbers) {
-				expect(Number.isInteger(number.minutes)).toBe(true);
-				expect(number.label).toBe(String(number.minutes));
-			}
-		}
+		// Both ends pulled inwards by half the gap, so the slot stays centred.
+		expect(gapped.start.x).toBeGreaterThan(gapless.start.x);
+		expect(gapped.end.x).toBeLessThan(gapless.end.x);
 	});
 
-	it('carries its total at the top, being a multiple of its own interval', () => {
-		for (const face of FACE_LADDER) {
-			const last = faceLayout(face).numbers.at(-1);
-			expect(last?.minutes).toBe(face);
-			expect(last?.degrees).toBeCloseTo(360);
-		}
+	it('closes the circle: the last slot ends where the first one starts', () => {
+		const first = endpoints(rimSegmentPath(0, RADIUS, C, 0));
+		const last = endpoints(rimSegmentPath(RIM_SEGMENTS - 1, RADIUS, C, 0));
+		expect(last.end.x).toBeCloseTo(first.start.x);
+		expect(last.end.y).toBeCloseTo(first.start.y);
 	});
 
-	it('never crowds the rim', () => {
-		for (const face of FACE_LADDER) {
-			expect(faceLayout(face).numbers.length).toBeLessThanOrEqual(12);
-		}
+	it('draws nothing for a slot with no time in it', () => {
+		expect(rimSegmentPath(3, RADIUS, C, 0, 0)).toBe('');
+		expect(rimSegmentPath(3, RADIUS, C, 0, -1)).toBe('');
+	});
+
+	it('stops a part-filled slot partway along, so the ring moves as time does', () => {
+		const half = endpoints(rimSegmentPath(0, RADIUS, C, 0, 0.5));
+		const whole = endpoints(rimSegmentPath(0, RADIUS, C, 0));
+
+		// Same start; a half slot reaches half as far round.
+		expect(half.start.x).toBeCloseTo(whole.start.x);
+		expect(half.end.x).toBeLessThan(whole.end.x);
+		expect(half.end.x).toBeCloseTo(polarPoint(15, RADIUS, C).x);
+	});
+
+	it('clamps an overfull slot to the whole slot', () => {
+		expect(rimSegmentPath(0, RADIUS, C, 0, 4)).toBe(rimSegmentPath(0, RADIUS, C, 0));
+	});
+
+	it('divides the hour face into as many slots as it has numbers', () => {
+		expect(360 / RIM_SEGMENTS).toBe(30);
+		expect(FACE_MINUTES / RIM_SEGMENTS).toBe(5);
 	});
 });
