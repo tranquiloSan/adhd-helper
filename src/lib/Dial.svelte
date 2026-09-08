@@ -4,8 +4,9 @@
 		DIAL_SIZE,
 		FACE_MINUTES,
 		RIM_SEGMENTS,
+		degreesFromPoint,
 		faceLayout,
-		minutesFromPoint,
+		minutesFromDegrees,
 		polarPoint,
 		rimSegmentPath,
 		wedgePath
@@ -15,8 +16,11 @@
 		/** How much of the face to fill, 0 to 1. The countdown drains it; the
 		 *  elapsed display fills it. */
 		fraction: number;
-		/** Minutes the dial currently represents, for assistive tech. */
+		/** Minutes the dial currently represents. The whole length, not just the
+		 *  part on the face, so a drag knows which hour it is starting in. */
 		valueMinutes: number;
+		/** Longest a drag may wind up to. */
+		maxMinutes?: number;
 		/** Hours lit on the ring, 0 to 12, and fractional: the hour in progress is
 		 *  drawn as it goes. Time still to come on the countdown, time already
 		 *  spent on the elapsed display - each pointing the same way as its own
@@ -33,6 +37,7 @@
 	let {
 		fraction,
 		valueMinutes,
+		maxMinutes = FACE_MINUTES,
 		rimHours = 0,
 		wedgeColour = '#dc2626',
 		finished = false,
@@ -81,29 +86,64 @@
 		}))
 	);
 
-	/** Turn a pointer position into whole minutes on the dial. */
-	function minutesAt(clientX: number, clientY: number): number {
-		if (svg === null) return valueMinutes;
+	/**
+	 * The hour a drag is currently working inside, and where it last was.
+	 *
+	 * A drag sets the minutes of an hour it holds on to, rather than the whole
+	 * length: on a 1h30 timer, pointing at 10 means 1h10, not 10 minutes, which
+	 * is what a face showing one hour has to mean if it is to be pointed at.
+	 * Winding past twelve o'clock moves to the next hour or back to the previous
+	 * one, so a drag can still reach any length rather than being trapped in the
+	 * hour it started in.
+	 */
+	let dragHours = 0;
+	let lastDegrees = 0;
+
+	const MAX_DRAG_HOURS = $derived(Math.max(0, Math.ceil(maxMinutes / FACE_MINUTES) - 1));
+
+	function degreesAt(clientX: number, clientY: number): number {
+		if (svg === null) return lastDegrees;
 
 		const rect = svg.getBoundingClientRect();
-		return minutesFromPoint(
+		return degreesFromPoint(
 			((clientX - rect.left) / rect.width) * SIZE,
 			((clientY - rect.top) / rect.height) * SIZE,
-			FACE_MINUTES,
 			CENTRE
 		);
+	}
+
+	/** The hour `minutes` sits in, counting a whole hour as the top of its own
+	 *  face rather than the bottom of the next one. */
+	const hourOf = (minutes: number) => Math.max(0, Math.ceil(minutes / FACE_MINUTES) - 1);
+
+	function commit(degrees: number) {
+		const minutes = minutesFromDegrees(degrees, FACE_MINUTES);
+		onSetMinutes?.(Math.min(maxMinutes, dragHours * FACE_MINUTES + minutes));
 	}
 
 	function onPointerDown(event: PointerEvent) {
 		if (!interactive) return;
 		dragging = true;
 		svg?.setPointerCapture(event.pointerId);
-		onSetMinutes?.(minutesAt(event.clientX, event.clientY));
+
+		dragHours = hourOf(valueMinutes);
+		lastDegrees = degreesAt(event.clientX, event.clientY);
+		commit(lastDegrees);
 	}
 
 	function onPointerMove(event: PointerEvent) {
 		if (!dragging) return;
-		onSetMinutes?.(minutesAt(event.clientX, event.clientY));
+		const degrees = degreesAt(event.clientX, event.clientY);
+
+		// A large angle becoming small is a sweep forwards past twelve o'clock,
+		// and the reverse is a sweep back. Pointer moves are sampled far too
+		// often for a real drag to skip the window.
+		if (lastDegrees > 270 && degrees < 90) dragHours += 1;
+		else if (lastDegrees < 90 && degrees > 270) dragHours -= 1;
+		dragHours = Math.min(MAX_DRAG_HOURS, Math.max(0, dragHours));
+
+		lastDegrees = degrees;
+		commit(degrees);
 	}
 
 	function onPointerUp(event: PointerEvent) {
@@ -124,8 +164,7 @@
 		if (delta === 0) return;
 
 		event.preventDefault();
-		const next = Math.min(FACE_MINUTES, Math.max(1, valueMinutes + delta));
-		onSetMinutes?.(next);
+		onSetMinutes?.(Math.min(maxMinutes, Math.max(1, valueMinutes + delta)));
 	}
 </script>
 
@@ -140,7 +179,7 @@
 	aria-label="Timer duration in minutes"
 	aria-disabled={!interactive}
 	aria-valuemin={1}
-	aria-valuemax={Math.max(FACE_MINUTES, valueMinutes)}
+	aria-valuemax={Math.max(maxMinutes, valueMinutes)}
 	aria-valuenow={valueMinutes}
 	onpointerdown={onPointerDown}
 	onpointermove={onPointerMove}

@@ -150,6 +150,7 @@
 		fraction={filled}
 		{rimHours}
 		valueMinutes={Math.round(timer.durationMs / 60_000)}
+		maxMinutes={MAX_LENGTH_MINUTES}
 		finished={timer.status === 'finished'}
 		interactive={editable}
 		onSetMinutes={setMinutes}
@@ -216,11 +217,11 @@
 		</div>
 
 		<p class="max-w-prose text-center text-xs leading-relaxed text-neutral-500">
-			Space starts and pauses. The length is locked once running - reset to change it. Drag the dial
-			for anything up to an hour, or type longer: the custom field takes minutes, or hours with an h
-			- 90, 2h and 1h30 all work. The face always means an hour, so a given amount of red always
-			means the same amount of time; the ring outside it counts the whole length down, an hour to a
-			slot.
+			Space starts and pauses. The length is locked once running - reset to change it. The face
+			always means an hour, so a given amount of red always means the same amount of time, and the
+			ring outside it counts the whole length down an hour to a slot. Dragging sets the minutes of
+			the hour you are in; carry on round past the top to add an hour, or back the other way to drop
+			one. The custom field takes minutes, or hours with an h - 90, 2h and 1h30 all work.
 		</p>
 	</div>
 

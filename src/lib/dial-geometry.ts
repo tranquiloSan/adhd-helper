@@ -91,27 +91,41 @@ export function rimSegmentPath(
 }
 
 /**
- * Whole minutes for a point on the dial, measured clockwise from 12 o'clock.
+ * Clockwise degrees from 12 o'clock for a point, 0 up to but not including 360.
+ *
+ * Kept separate from the minute it lands on because a drag needs the raw angle:
+ * winding past twelve o'clock is how a drag reaches past the face, and that can
+ * only be seen as an angle that was large becoming small.
+ *
+ * Distance from the centre is ignored, so a drag that strays off the disc still
+ * tracks.
+ */
+export function degreesFromPoint(x: number, y: number, centre: number = DIAL_CENTRE): number {
+	// atan2(dx, -dy) puts zero at 12 o'clock and grows clockwise.
+	let angle = Math.atan2(x - centre, -(y - centre));
+	if (angle < 0) angle += 2 * Math.PI;
+	return (angle / (2 * Math.PI)) * 360;
+}
+
+/**
+ * The whole minute an angle lands on.
  *
  * Straight up is `maxMinutes` rather than zero: the top of the dial is a full
- * face, and snapping to zero would mean no time at all. Distance from the
- * centre is ignored, so a drag that strays off the disc still tracks.
+ * face, and snapping to zero would mean no time at all.
  */
+export function minutesFromDegrees(degrees: number, maxMinutes: number = FACE_MINUTES): number {
+	const minutes = Math.round((degrees / 360) * maxMinutes);
+	return minutes === 0 ? maxMinutes : minutes;
+}
+
+/** Whole minutes for a point on the dial, measured clockwise from 12 o'clock. */
 export function minutesFromPoint(
 	x: number,
 	y: number,
 	maxMinutes: number = FACE_MINUTES,
 	centre: number = DIAL_CENTRE
 ): number {
-	const dx = x - centre;
-	const dy = y - centre;
-
-	// atan2(dx, -dy) puts zero at 12 o'clock and grows clockwise.
-	let angle = Math.atan2(dx, -dy);
-	if (angle < 0) angle += 2 * Math.PI;
-
-	const minutes = Math.round((angle / (2 * Math.PI)) * maxMinutes);
-	return minutes === 0 ? maxMinutes : minutes;
+	return minutesFromDegrees(degreesFromPoint(x, y, centre), maxMinutes);
 }
 
 export type FaceMark = { minutes: number; degrees: number; major: boolean };

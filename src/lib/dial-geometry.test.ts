@@ -3,7 +3,9 @@ import {
 	DIAL_CENTRE,
 	FACE_MINUTES,
 	RIM_SEGMENTS,
+	degreesFromPoint,
 	faceLayout,
+	minutesFromDegrees,
 	minutesFromPoint,
 	polarPoint,
 	rimSegmentPath,
@@ -60,6 +62,42 @@ describe('minutesFromPoint', () => {
 
 	it('ignores distance from the centre, so a drag off the disc still tracks', () => {
 		expect(minutesFromPoint(C + 900, C, 60)).toBe(minutesFromPoint(C + 10, C, 60));
+	});
+});
+
+describe('degreesFromPoint', () => {
+	it('reads the top of the dial as zero', () => {
+		expect(degreesFromPoint(C, C - 50, C)).toBeCloseTo(0);
+	});
+
+	it('grows clockwise: right is a quarter turn, bottom a half, left three quarters', () => {
+		expect(degreesFromPoint(C + 50, C, C)).toBeCloseTo(90);
+		expect(degreesFromPoint(C, C + 50, C)).toBeCloseTo(180);
+		expect(degreesFromPoint(C - 50, C, C)).toBeCloseTo(270);
+	});
+
+	it('never returns a full turn, so a wind past the top always reads as small', () => {
+		// Just anticlockwise of the top, which is what a drag sees the instant
+		// before it crosses.
+		expect(degreesFromPoint(C - 1, C - 50, C)).toBeGreaterThan(270);
+		expect(degreesFromPoint(C + 1, C - 50, C)).toBeLessThan(90);
+	});
+
+	it('ignores distance from the centre, so a drag off the disc still tracks', () => {
+		expect(degreesFromPoint(C + 5, C, C)).toBeCloseTo(degreesFromPoint(C + 5000, C, C));
+	});
+});
+
+describe('minutesFromDegrees', () => {
+	it('reads the top as a full face, not zero', () => {
+		expect(minutesFromDegrees(0)).toBe(60);
+		expect(minutesFromDegrees(360)).toBe(60);
+	});
+
+	it('snaps to whole minutes', () => {
+		expect(minutesFromDegrees(90)).toBe(15);
+		expect(minutesFromDegrees(91)).toBe(15);
+		expect(minutesFromDegrees(180)).toBe(30);
 	});
 });
 

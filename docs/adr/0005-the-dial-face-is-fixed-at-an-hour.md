@@ -68,11 +68,19 @@ and four lines of copy explaining the whole arrangement to someone whose dial is
 supposed to be glanceable. All of it is gone. A face with no state cannot be in
 the wrong state.
 
-Dragging now reaches an hour and no further, and a longer length is typed. That
-is the one thing genuinely lost, and it is the cheap half of the pair: the reason
-0004 gave for a held face - that a drag must not rescale the thing it is aiming
-at - is satisfied more completely by a face that cannot change than by one that
-changes on a ladder.
+A drag sets the minutes of the hour it is already in, and winds past twelve
+o'clock to change which hour that is. The first version of this clamped a drag to
+the face and was plainly wrong in use: with 1h30 typed, pointing at the 10 gave
+ten minutes and silently threw the hour away. A face showing one hour of a longer
+length has to mean that hour when you point at it, or it is not a control at all.
+Winding is then the only way back out, and it is the one a physical dial would
+have offered anyway - keep going round and the length keeps growing, turn back
+and it shrinks, with a floor at zero and a ceiling at the longest length.
+
+None of that endangers what 0004 was protecting. Its reason for a held face - that
+a drag must not rescale the thing it is aiming at - is satisfied more completely
+by a face that cannot change at all than by one that changes on a ladder. The
+hour a drag is working in moves; the face it is aiming at never does.
 
 Before making the face resize again, answer the question this ADR turns on: what
 does a given amount of red mean, and does it still mean the same thing tomorrow.
