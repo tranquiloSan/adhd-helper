@@ -23,31 +23,42 @@ of them was telling the truth.
 
 A face that never changes needs somewhere to put a length longer than itself.
 The face prints a number every five minutes, so it carries twelve of them, and
-twelve is also what a ring of whole hours wants: one slot per hour, its
-boundaries landing on numbers the eye already uses, one lap of the ring being
-twelve hours. The face reads minutes and the ring reads hours, which is the
-division an analogue clock made a long time ago. The countdown's ring holds the
-hours still to come and the elapsed display's holds the hours already spent -
-each pointing the same way as its own wedge, which is the rule the wedge itself
-has always followed.
+twelve is also what a ring of hours wants: one slot per hour, its boundaries
+landing on numbers the eye already uses, one lap of the ring being twelve hours.
+The countdown's ring holds the time still to come and the elapsed display's holds
+the time already spent - each pointing the same way as its own wedge, which is
+the rule the wedge itself has always followed.
 
-The ring is drawn _outside_ the disc rather than on the disc's rim, and that is
-not decoration. Drawn on the rim it is ink against a near-black page on its outer
-half and buried under a full wedge on its inner half - and a full wedge is
-exactly the state a timer of a whole number of hours starts in, so the marks
-would vanish at the moment they carry the most. Outside the disc each slot has
-the background to stand against. The disc keeps the plain dark outline it has
-always had, so nothing about the familiar object changes; the hours are a
-separate ring that is simply absent under an hour.
+The ring reads the _whole_ time and fills the slot for the hour in progress as
+that hour is spent, rather than ticking over one slot at a time. So the face and
+the ring are a minute hand and an hour hand: the same time twice, at two scales,
+an arrangement nobody has needed explaining since clocks acquired them. The
+redundancy is the point. It is also what makes the ring worth having, because a
+ring that moved once an hour would be a thing you checked rather than a thing you
+saw.
 
-The cost is a discontinuity. At 61 minutes the face holds a one-minute sliver and
-one slot is lit; at 60 the slot clears and the face refills. That reads as an
-hour being promoted off the ring onto the face, and it happens once per hour
-crossed. It is worth being plain that this is not smooth, and equally plain that
-it is the same discontinuity Elapsed has had since `e3a1e03`, where the wedge
-fills for an hour and starts again - lived with daily and never complained about.
-The clock underneath never jumps, so there is always something continuous to read
-while the picture rearranges.
+Three details of the drawing were each got wrong first, so they are worth
+recording. The ring is _outside_ the disc rather than on the disc's rim: on the
+rim it is ink against a near-black page on its outer half and buried under a full
+wedge on its inner half, and a full wedge is exactly the state a whole-hour timer
+starts in, so the marks vanished at the moment they carried the most. The lit
+part wears the _face's_ colour rather than the wedge's, which is the same problem
+one step further in - a red ring on a red disc is legible only at its edge, and a
+full slot means one more whole face of time anyway, so the face's colour is what
+it should have been saying all along. And the unlit slots are _always_ drawn:
+hiding them looked tidier and made the crossing worse, because the ring then
+appeared and disappeared as an hour changed hands and two things moved at once.
+An empty ring is not a count of nothing; it is the scale the count is read
+against, and a ruler with nothing measured on it is still a ruler.
+
+The cost is a discontinuity on the face. At 61 minutes it holds a one-minute
+sliver; at 60 it is full. That happens once per hour crossed, and it is the same
+discontinuity Elapsed has had since `e3a1e03`, where the wedge fills for an hour
+and starts again - lived with daily and never remarked on. What keeps it reading
+as an event rather than a glitch is that nothing else jumps with it: the ring
+passes through 1.02, 1.00 and 0.98 slots without a step, and the clock underneath
+counts straight through. The face rearranges while the two things either side of
+it keep going, which is the whole reason the ring is continuous.
 
 What this buys, beyond the calibration, is subtraction. The ladder needed eleven
 rungs, a function to pick one, a second marking scheme for faces past an hour, a

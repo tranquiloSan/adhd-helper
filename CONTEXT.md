@@ -62,10 +62,12 @@ the ring instead of stretching it.
 _Avoid_: scale, range, size
 
 **Ring**:
-The twelve hour slots outside the disc, one lit per whole hour - still to come on
-the timer, already spent on the elapsed count. Boundaries land on the printed
-numbers, so the face reads minutes and the ring reads hours. Absent under an
-hour, and laps every twelve.
+The twelve hour slots outside the disc, reading the whole time rather than the
+part the face holds - still to come on the timer, already spent on the elapsed
+count. The slot for the hour in progress fills as it goes, so the ring keeps
+moving while the face swaps hours over. Boundaries land on the printed numbers,
+so face and ring are a minute hand and an hour hand. Always drawn, lit or not,
+and laps every twelve hours.
 _Avoid_: rim, bezel, dots, pips
 
 **Account**:

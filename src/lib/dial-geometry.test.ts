@@ -142,6 +142,25 @@ describe('rimSegmentPath', () => {
 		expect(last.end.y).toBeCloseTo(first.start.y);
 	});
 
+	it('draws nothing for a slot with no time in it', () => {
+		expect(rimSegmentPath(3, RADIUS, C, 0, 0)).toBe('');
+		expect(rimSegmentPath(3, RADIUS, C, 0, -1)).toBe('');
+	});
+
+	it('stops a part-filled slot partway along, so the ring moves as time does', () => {
+		const half = endpoints(rimSegmentPath(0, RADIUS, C, 0, 0.5));
+		const whole = endpoints(rimSegmentPath(0, RADIUS, C, 0));
+
+		// Same start; a half slot reaches half as far round.
+		expect(half.start.x).toBeCloseTo(whole.start.x);
+		expect(half.end.x).toBeLessThan(whole.end.x);
+		expect(half.end.x).toBeCloseTo(polarPoint(15, RADIUS, C).x);
+	});
+
+	it('clamps an overfull slot to the whole slot', () => {
+		expect(rimSegmentPath(0, RADIUS, C, 0, 4)).toBe(rimSegmentPath(0, RADIUS, C, 0));
+	});
+
 	it('divides the hour face into as many slots as it has numbers', () => {
 		expect(360 / RIM_SEGMENTS).toBe(30);
 		expect(FACE_MINUTES / RIM_SEGMENTS).toBe(5);

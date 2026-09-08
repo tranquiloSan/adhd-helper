@@ -17,9 +17,10 @@
 		fraction: number;
 		/** Minutes the dial currently represents, for assistive tech. */
 		valueMinutes: number;
-		/** Whole hours on the rim, 0 to 12. Hours still to come on the countdown,
-		 *  hours already spent on the elapsed display - each pointing the same way
-		 *  as its own wedge. Zero leaves the rim plain. */
+		/** Hours lit on the ring, 0 to 12, and fractional: the hour in progress is
+		 *  drawn as it goes. Time still to come on the countdown, time already
+		 *  spent on the elapsed display - each pointing the same way as its own
+		 *  wedge. */
 		rimHours?: number;
 		wedgeColour?: string;
 		/** Turns the rim red. An empty face alone reads no differently from an
@@ -61,17 +62,23 @@
 	const wedge = $derived(wedgePath(clamped, RADIUS, CENTRE));
 	const layout = faceLayout();
 
-	/** The hour ring appears only when it has something to say. An hour or less
-	 *  leaves the dial exactly as it has always been. */
-	const hours = $derived(Math.min(RIM_SEGMENTS, Math.max(0, Math.round(rimHours))));
+	/**
+	 * The ring: twelve slots always drawn as a track, with the lit part laid over
+	 * it and the hour in progress part-filled.
+	 *
+	 * Hiding the track when nothing was lit looked like the tidier rule and made
+	 * the crossing worse - the whole ring appeared and disappeared as an hour
+	 * changed hands, so two things moved at once. An empty ring is not a count of
+	 * nothing anyway; it is the scale the count is read against, and a ruler with
+	 * nothing measured on it is still a ruler.
+	 */
+	const hours = $derived(Math.min(RIM_SEGMENTS, Math.max(0, rimHours)));
 	const slots = $derived(
-		hours === 0
-			? []
-			: Array.from({ length: RIM_SEGMENTS }, (_, i) => ({
-					index: i,
-					path: rimSegmentPath(i, HOUR_RADIUS, CENTRE),
-					lit: i < hours
-				}))
+		Array.from({ length: RIM_SEGMENTS }, (_, i) => ({
+			index: i,
+			track: rimSegmentPath(i, HOUR_RADIUS, CENTRE),
+			lit: rimSegmentPath(i, HOUR_RADIUS, CENTRE, undefined, hours - i)
+		}))
 	);
 
 	/** Turn a pointer position into whole minutes on the dial. */
@@ -184,13 +191,22 @@
 
 	<!-- One slot per hour, outside the disc, its boundaries landing on the printed
 	     numbers - twelve of each, so the face reads minutes and the ring reads
-	     hours. Unlit slots stay drawn, so the lit ones are a position on a scale
-	     rather than a row to be counted. -->
-	{#if slots.length > 0}
-		<g fill="none" stroke-width="4" stroke-linecap="butt">
-			{#each slots as slot (slot.index)}
-				<path d={slot.path} stroke={slot.lit ? wedgeColour : TRACK} opacity={slot.lit ? 1 : 0.42} />
-			{/each}
-		</g>
-	{/if}
+	     hours. Between them they are an hour hand and a minute hand: the same
+	     time at two scales, which is why the ring can move smoothly through the
+	     moment the face swaps over.
+
+	     Lit in the face's own colour, because that is what a full slot stands
+	     for - one more whole face of time. Taking the wedge's colour instead put
+	     red on red the moment a whole-hour timer started, which is when the ring
+	     carries the most. -->
+	<g fill="none" stroke-width="4" stroke-linecap="butt">
+		{#each slots as slot (slot.index)}
+			<path d={slot.track} stroke={TRACK} opacity="0.42" />
+		{/each}
+		{#each slots as slot (slot.index)}
+			{#if slot.lit !== ''}
+				<path d={slot.lit} stroke={FACE} />
+			{/if}
+		{/each}
+	</g>
 </svg>

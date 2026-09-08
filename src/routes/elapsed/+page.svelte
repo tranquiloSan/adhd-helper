@@ -61,10 +61,10 @@
 	const laps = $derived(Math.floor(elapsedMinutes / FACE_MINUTES));
 	const fraction = $derived((elapsedMinutes % FACE_MINUTES) / FACE_MINUTES);
 
-	/** The same hours, on the rim, lapping every twelve the way the face laps
-	 *  every one. The caption still says the absolute count in words, so nothing
-	 *  is lost when the rim comes round. */
-	const rimHours = $derived(laps % RIM_SEGMENTS);
+	/** The same time on the ring, counting up continuously and lapping every
+	 *  twelve hours the way the face laps every one. The caption still says the
+	 *  absolute count in words, so nothing is lost when the ring comes round. */
+	const rimHours = $derived((elapsedMinutes / 60) % RIM_SEGMENTS);
 
 	/**
 	 * Warms once a stretch runs long. Visible if you glance, invisible if you
@@ -189,8 +189,9 @@
 
 	<p class="max-w-prose text-center text-xs leading-relaxed text-neutral-500">
 		Counts up with no target and no alarm, so it can tell you how long you have been at something
-		without breaking the focus it took to get there. The wedge fills each hour and starts again, and
-		each whole hour is marked on the rim; the colour warms once a stretch runs long.
+		without breaking the focus it took to get there. The wedge fills each hour and starts again
+		while the ring outside it keeps counting up, an hour to a slot; the colour warms once a stretch
+		runs long.
 	</p>
 
 	<p class="max-w-prose text-center text-xs leading-relaxed text-neutral-500">

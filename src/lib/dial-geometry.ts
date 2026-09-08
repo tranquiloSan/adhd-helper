@@ -58,22 +58,31 @@ export const RIM_SEGMENTS = 12;
 const RIM_GAP_DEGREES = 4;
 
 /**
- * An SVG path for one hour slot on the rim.
+ * An SVG path for one hour slot on the ring, or the first `fraction` of one.
  *
- * Open rather than closed, and meant to be stroked: the rim is a line, unlike
+ * Open rather than closed, and meant to be stroked: the ring is a line, unlike
  * the wedge, which is a filled pie drawn from the centre. A slot spans a
  * twelfth of the circle, so it can never be the long way round and the large-arc
  * flag is always zero.
+ *
+ * A part-filled slot is what makes the ring a reading rather than a count: the
+ * hour being spent is drawn as it goes, so the ring moves continuously while the
+ * face - which can only ever show one hour - swaps over. Returns an empty string
+ * for nothing to draw, matching `wedgePath`.
  */
 export function rimSegmentPath(
 	index: number,
 	radius: number,
 	centre: number = DIAL_CENTRE,
-	gapDegrees: number = RIM_GAP_DEGREES
+	gapDegrees: number = RIM_GAP_DEGREES,
+	fraction: number = 1
 ): string {
+	const filled = Math.min(1, Math.max(0, fraction));
+	if (filled <= 0) return '';
+
 	const span = 360 / RIM_SEGMENTS;
 	const from = index * span + gapDegrees / 2;
-	const to = (index + 1) * span - gapDegrees / 2;
+	const to = from + (span - gapDegrees) * filled;
 
 	const start = polarPoint(from, radius, centre);
 	const end = polarPoint(to, radius, centre);

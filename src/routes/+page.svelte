@@ -13,16 +13,21 @@
 	const clock = $derived(formatDuration(timer.remainingMs));
 
 	/**
-	 * Whole hours still to come, shown on the rim, and the part of the current
-	 * hour left on the face.
+	 * The face holds the hour being counted; the ring holds all of it.
 	 *
 	 * The face is a fixed hour and stays one, so a given amount of red always
 	 * means the same amount of time - which is the property a face exists for and
-	 * the one a resizing face quietly destroys. Anything longer is counted on the
-	 * rim instead of stretching the face to hold it.
+	 * the one a resizing face quietly destroys. Anything longer goes to the ring
+	 * rather than stretching the face to hold it.
+	 *
+	 * The ring is the whole remaining time in hours and runs down continuously,
+	 * so it keeps moving through the moment the face finishes an hour and refills.
+	 * The two are an hour hand and a minute hand: the same time twice, at scales
+	 * that suit different lengths.
 	 */
-	const rimHours = $derived(Math.max(0, Math.ceil(timer.remainingMs / HOUR_MS) - 1) % RIM_SEGMENTS);
-	const filled = $derived((timer.remainingMs - rimHours * HOUR_MS) / HOUR_MS);
+	const wholeHours = $derived(Math.max(0, Math.ceil(timer.remainingMs / HOUR_MS) - 1));
+	const filled = $derived((timer.remainingMs - wholeHours * HOUR_MS) / HOUR_MS);
+	const rimHours = $derived((timer.remainingMs / HOUR_MS) % RIM_SEGMENTS);
 
 	/** The duration is locked once started; only a reset unlocks it. */
 	const editable = $derived(timer.status === 'idle');
@@ -213,8 +218,9 @@
 		<p class="max-w-prose text-center text-xs leading-relaxed text-neutral-500">
 			Space starts and pauses. The length is locked once running - reset to change it. Drag the dial
 			for anything up to an hour, or type longer: the custom field takes minutes, or hours with an h
-			- 90, 2h and 1h30 all work. Each whole hour beyond the face is marked on the rim, so the face
-			itself always means an hour and a given amount of red always means the same amount of time.
+			- 90, 2h and 1h30 all work. The face always means an hour, so a given amount of red always
+			means the same amount of time; the ring outside it counts the whole length down, an hour to a
+			slot.
 		</p>
 	</div>
 
