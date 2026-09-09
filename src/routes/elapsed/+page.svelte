@@ -6,8 +6,14 @@
 	import { DEFAULT_THRESHOLD_MINUTES, elapsed } from '$lib/elapsed.svelte';
 	import { formatApproximate, formatDuration, formatTimeWithDay } from '$lib/format';
 	import { loadThresholdMinutes, saveThresholdMinutes } from '$lib/persistence';
+	import { parseLengthMinutes } from '$lib/timer.svelte';
 
 	let accountOpen = $state(false);
+
+	// Revealed only when asked for: back-dating the start is the uncommon case,
+	// and the idle screen stays a dial and one button until you say you forgot.
+	let backdateOpen = $state(false);
+	let backdateText = $state('');
 
 	let thresholdMinutes = $state(DEFAULT_THRESHOLD_MINUTES);
 
@@ -18,6 +24,12 @@
 
 	const elapsedMinutes = $derived(elapsed.elapsedMs / 60_000);
 	const clock = $derived(formatDuration(elapsed.elapsedMs));
+
+	/** A typed length in minutes, or null while the field is empty or not a
+	 *  length. Same grammar as the timer: "90", "2h", "1h30". */
+	const backdateMinutes = $derived(
+		backdateText.trim() === '' ? null : parseLengthMinutes(backdateText)
+	);
 
 	// Only the day qualifier on the start time depends on this, and that changes
 	// at midnight, so a minute is plenty. The layout drives the count itself.
@@ -88,11 +100,30 @@
 		}
 	});
 
+	/**
+	 * What Start is about to do with the typed length: the stretch it will open,
+	 * said in full so a mistyped "20h" is caught before it is committed - the same
+	 * job the day's preview does, and it checks nothing else either.
+	 */
+	const backdatePreview = $derived.by(() => {
+		if (!backdateOpen || backdateText.trim() === '') return null;
+		if (backdateMinutes === null) return { problem: 'That is not a length.' };
+		const ago = backdateMinutes * 60_000;
+		return { text: `${formatApproximate(ago)}, started ${formatTimeWithDay(now - ago, now)}` };
+	});
+
 	function toggle() {
 		switch (elapsed.status) {
-			case 'idle':
-				elapsed.start();
+			case 'idle': {
+				const startedAt =
+					backdateOpen && backdateMinutes !== null
+						? Date.now() - backdateMinutes * 60_000
+						: undefined;
+				elapsed.start(Date.now(), startedAt);
+				backdateOpen = false;
+				backdateText = '';
 				return;
+			}
 			case 'running':
 				elapsed.pause();
 				return;
@@ -185,6 +216,42 @@
 				</button>
 			{/if}
 		</div>
+
+		{#if elapsed.status === 'idle'}
+			<!-- The stretch you meant to start earlier. Behind a link, because most
+			     starts are just Start and the screen should not ask a question that
+			     rarely has an answer. -->
+			{#if !backdateOpen}
+				<button
+					type="button"
+					onclick={() => (backdateOpen = true)}
+					class="text-xs text-neutral-500 underline decoration-neutral-700 underline-offset-2 transition hover:text-neutral-300"
+				>
+					Forgotten to start?
+				</button>
+			{:else}
+				<div class="flex flex-col items-center gap-1">
+					<label class="flex items-center gap-2 text-xs text-neutral-500">
+						<span>Should have been running for</span>
+						<input
+							type="text"
+							inputmode="numeric"
+							bind:value={backdateText}
+							placeholder="2h"
+							aria-label="Time already running"
+							class="w-20 rounded-full border border-neutral-800 bg-transparent px-3 py-1 text-center tabular-nums outline-none focus-visible:border-neutral-600"
+						/>
+					</label>
+					<p class="h-4 text-xs" aria-live="polite">
+						{#if backdatePreview?.problem}
+							<span class="text-red-400">{backdatePreview.problem}</span>
+						{:else if backdatePreview?.text}
+							<span class="text-neutral-400">{backdatePreview.text}</span>
+						{/if}
+					</p>
+				</div>
+			{/if}
+		{/if}
 	</div>
 
 	<p class="max-w-prose text-center text-xs leading-relaxed text-neutral-500">

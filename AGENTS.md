@@ -34,6 +34,7 @@ Read the relevant ADR before changing these behaviors:
 - Fixed one-hour dial and twelve-hour timer limit: ADR 0005.
 - Current-stretch account in an overlay: ADR 0006.
 - Fixed twelve-hour day timeline: ADR 0007.
+- Starting a stretch in the past: ADR 0008.
 
 ADRs live in `docs/adr/`. Parked GitHub issues describe conditions for
 revisiting decisions; they are not requests to implement those features.

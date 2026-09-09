@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { DayCountdown, hourMarks, resolveEndTime, type DaySnapshot } from './day.svelte';
+import {
+	DayCountdown,
+	hourMarks,
+	resolveEndTime,
+	resolveStartTime,
+	type DaySnapshot
+} from './day.svelte';
 
 const MINUTE = 60_000;
 const HOUR = 3_600_000;
@@ -44,6 +50,21 @@ describe('day countdown', () => {
 
 		day.acknowledge();
 		expect(day.needsAnnouncement).toBe(false);
+	});
+
+	it('takes an earlier start without moving the countdown', () => {
+		const day = new DayCountdown();
+		day.start(T0 + 8 * HOUR, T0, T0 - 3 * HOUR);
+
+		expect(day.startedAt).toBe(T0 - 3 * HOUR);
+		day.sync(T0 + 3 * HOUR);
+		expect(day.remainingMs).toBe(5 * HOUR);
+	});
+
+	it('clamps a start in the future to now', () => {
+		const day = new DayCountdown();
+		day.start(T0 + 8 * HOUR, T0, T0 + HOUR);
+		expect(day.startedAt).toBe(T0);
 	});
 });
 
@@ -126,6 +147,43 @@ describe('resolveEndTime', () => {
 		expect(resolveEndTime('5pm', T0)).toBeNull();
 		expect(resolveEndTime('25:00', T0)).toBeNull();
 		expect(resolveEndTime('12:70', T0)).toBeNull();
+	});
+});
+
+describe('resolveStartTime', () => {
+	/** 15:00, so morning times are in the past and evening ones are not. */
+	function threePm(): number {
+		const d = new Date(T0);
+		d.setHours(15, 0, 0, 0);
+		return d.getTime();
+	}
+
+	it('resolves a time already gone today', () => {
+		const now = threePm();
+		const start = resolveStartTime('09:00', now);
+		expect(start).not.toBeNull();
+		expect(now - start!).toBe(6 * HOUR);
+		expect(new Date(start!).getHours()).toBe(9);
+	});
+
+	it('means yesterday when the time is still to come today', () => {
+		const now = threePm();
+		const start = resolveStartTime('22:00', now);
+		expect(start).not.toBeNull();
+		expect(now - start!).toBe(17 * HOUR);
+		expect(new Date(start!).getHours()).toBe(22);
+	});
+
+	it('accepts a time without the colon', () => {
+		const now = threePm();
+		expect(resolveStartTime('900', now)).toBe(resolveStartTime('09:00', now));
+	});
+
+	it('rejects anything that is not a time', () => {
+		expect(resolveStartTime('', T0)).toBeNull();
+		expect(resolveStartTime('9am', T0)).toBeNull();
+		expect(resolveStartTime('25:00', T0)).toBeNull();
+		expect(resolveStartTime('9:70', T0)).toBeNull();
 	});
 });
 

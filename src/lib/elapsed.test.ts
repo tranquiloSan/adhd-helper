@@ -302,3 +302,45 @@ describe('the account of a stretch', () => {
 		expect(elapsed.segments).toEqual([]);
 	});
 });
+
+describe('a stretch started in the past', () => {
+	it('opens the count at the time it really began', () => {
+		const elapsed = new Elapsed();
+		elapsed.start(T0, T0 - 90 * MINUTE);
+
+		expect(elapsed.elapsedMs).toBe(90 * MINUTE);
+		expect(elapsed.stretchStartedAt).toBe(T0 - 90 * MINUTE);
+	});
+
+	it('back-dates the first worked period with it', () => {
+		const elapsed = new Elapsed();
+		elapsed.start(T0, T0 - 90 * MINUTE);
+
+		expect(elapsed.segments).toEqual([
+			{ kind: 'work', startedAt: T0 - 90 * MINUTE, endedAt: null }
+		]);
+	});
+
+	it('clamps a start in the future to now, rather than counting backwards', () => {
+		const elapsed = new Elapsed();
+		elapsed.start(T0, T0 + 30 * MINUTE);
+
+		expect(elapsed.elapsedMs).toBe(0);
+		expect(elapsed.stretchStartedAt).toBe(T0);
+	});
+
+	it('still accounts for every moment once a break follows', () => {
+		const elapsed = new Elapsed();
+		elapsed.start(T0, T0 - 60 * MINUTE);
+		elapsed.pause(T0 + 20 * MINUTE);
+		elapsed.resume(T0 + 35 * MINUTE);
+		elapsed.sync(T0 + 50 * MINUTE);
+
+		const accountedTo =
+			(elapsed.stretchStartedAt ?? 0) +
+			elapsed.elapsedMs +
+			elapsed.breakMs +
+			elapsed.currentBreakMs;
+		expect(accountedTo).toBe(T0 + 50 * MINUTE);
+	});
+});

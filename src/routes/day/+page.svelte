@@ -2,7 +2,7 @@
 	import { browser } from '$app/environment';
 	import { Alarm } from '$lib/alarm';
 	import DayTimeline from '$lib/DayTimeline.svelte';
-	import { day, hourMarks, resolveEndTime } from '$lib/day.svelte';
+	import { day, hourMarks, resolveEndTime, resolveStartTime } from '$lib/day.svelte';
 	import {
 		formatApproximate,
 		formatCompact,
@@ -21,6 +21,11 @@
 	let endTime = $state('17:00');
 	let problem = $state('');
 	let now = $state(Date.now());
+
+	// Revealed on request: naming an earlier start only moves the "3 hours in"
+	// line, so it stays out of the way until asked for.
+	let backdateOpen = $state(false);
+	let startText = $state('');
 
 	if (browser) {
 		const stored = loadEndTime();
@@ -44,6 +49,21 @@
 			? null
 			: `${formatApproximate(plannedEndsAt - now)}, ending ${formatTimeWithDay(plannedEndsAt, now)}`
 	);
+
+	/** The named start, as a moment already gone, or null while the field is empty. */
+	const backdateStartedAt = $derived(
+		startText.trim() === '' ? null : resolveStartTime(startText, now)
+	);
+
+	/** What Start will record as the beginning, said in full so a mistype shows
+	 *  before it is committed - the same job the end's preview does. */
+	const startPreview = $derived.by(() => {
+		if (!backdateOpen || startText.trim() === '') return null;
+		if (backdateStartedAt === null) return { problem: 'That is not a time.' };
+		return {
+			text: `${formatApproximate(now - backdateStartedAt)} in, started ${formatTimeWithDay(backdateStartedAt, now)}`
+		};
+	});
 
 	/**
 	 * The track is the next twelve hours, before and after Start alike.
@@ -98,12 +118,23 @@
 			return;
 		}
 
+		let startedAt: number | undefined;
+		if (backdateOpen && startText.trim() !== '') {
+			startedAt = resolveStartTime(startText, Date.now()) ?? undefined;
+			if (startedAt === undefined) {
+				problem = 'That start time is not a time.';
+				return;
+			}
+		}
+
 		problem = '';
 		// Normalised, so a typed "1700" comes back as "17:00" next time.
 		saveEndTime(formatTimeOfDay(endsAt));
 		// Asked for inside the click, since permission needs a gesture.
 		await Alarm.requestPermission();
-		day.start(endsAt);
+		day.start(endsAt, Date.now(), startedAt);
+		backdateOpen = false;
+		startText = '';
 	}
 </script>
 
@@ -154,6 +185,37 @@
 					<span class="text-neutral-400">{preview}</span>
 				{/if}
 			</p>
+
+			<!-- For a day already underway when you name its end. Only the "3 hours
+			     in" line moves; the track and countdown are anchored at now. -->
+			{#if !backdateOpen}
+				<button
+					type="button"
+					onclick={() => (backdateOpen = true)}
+					class="text-xs text-neutral-500 underline decoration-neutral-700 underline-offset-2 transition hover:text-neutral-300"
+				>
+					Started earlier?
+				</button>
+			{:else}
+				<label class="flex items-center gap-2 text-sm text-neutral-500">
+					<span>Started at</span>
+					<input
+						type="text"
+						inputmode="numeric"
+						bind:value={startText}
+						placeholder="09:00"
+						aria-label="Start of day"
+						class="w-20 rounded-full border border-neutral-700 bg-transparent px-3 py-1 text-center tabular-nums outline-none focus-visible:border-neutral-500"
+					/>
+				</label>
+				<p class="h-4 text-sm" aria-live="polite">
+					{#if startPreview?.problem}
+						<span class="text-red-400">{startPreview.problem}</span>
+					{:else if startPreview?.text}
+						<span class="text-neutral-400">{startPreview.text}</span>
+					{/if}
+				</p>
+			{/if}
 		</div>
 	{:else}
 		<div class="grid place-items-center gap-1">

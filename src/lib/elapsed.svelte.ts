@@ -112,14 +112,21 @@ export class Elapsed {
 		if (open !== undefined && open.endedAt === null) open.endedAt = now;
 	}
 
-	start(now: number = Date.now()): void {
-		this.#startedAt = now;
+	/**
+	 * Begin a stretch. `startedAt` defaults to now, but a stretch you only thought
+	 * to start after an hour of work can be told when it really began, so the count
+	 * opens at that hour rather than zero. A time in the future would count
+	 * backwards, so it is clamped to now.
+	 */
+	start(now: number = Date.now(), startedAt: number = now): void {
+		const began = Math.min(startedAt, now);
+		this.#startedAt = began;
 		this.#accumulatedMs = 0;
-		this.#firstStartedAt = now;
+		this.#firstStartedAt = began;
 		this.#pausedAt = null;
 		this.#breakMs = 0;
 		this.#breakCount = 0;
-		this.#segments = [{ kind: 'work', startedAt: now, endedAt: null }];
+		this.#segments = [{ kind: 'work', startedAt: began, endedAt: null }];
 		this.#now = now;
 		this.status = 'running';
 	}
