@@ -62,9 +62,16 @@ export class DayCountdown {
 		}
 	}
 
-	start(endsAt: number, now: number = Date.now()): void {
+	/**
+	 * Start counting down to `endsAt`. `startedAt` defaults to now; a day you have
+	 * been working since before you named its end can be told when it began, which
+	 * is the only figure that changes - the "3 hours in" line. The track and the
+	 * countdown are anchored at now regardless. A start in the future is clamped to
+	 * now.
+	 */
+	start(endsAt: number, now: number = Date.now(), startedAt: number = now): void {
 		if (endsAt <= now) return;
-		this.#startedAt = now;
+		this.#startedAt = Math.min(startedAt, now);
 		this.#endsAt = endsAt;
 		this.#announced = false;
 		this.#now = now;
@@ -127,6 +134,30 @@ export function resolveEndTime(value: string, now: number = Date.now()): number 
 	// survives a clock change.
 	if (end.getTime() <= now) end.setDate(end.getDate() + 1);
 	return end.getTime();
+}
+
+/**
+ * Turn a typed clock time into a timestamp in the past.
+ *
+ * The mirror of `resolveEndTime`: a time still to come today is read as
+ * yesterday's, since a day you are only now naming the end of started earlier,
+ * and an evening's work that began at 22:00 is a real thing to have been at
+ * since. Accepts `900` and `9:00` as well as `09:00`.
+ */
+export function resolveStartTime(value: string, now: number = Date.now()): number | null {
+	const match = /^(\d{1,2}):?(\d{2})$/.exec(value.trim());
+	if (match === null) return null;
+
+	const hours = Number(match[1]);
+	const minutes = Number(match[2]);
+	if (hours > 23 || minutes > 59) return null;
+
+	const start = new Date(now);
+	start.setHours(hours, minutes, 0, 0);
+	// setDate rather than subtracting a day of milliseconds, so the wall-clock
+	// time survives a clock change.
+	if (start.getTime() > now) start.setDate(start.getDate() - 1);
+	return start.getTime();
 }
 
 /**

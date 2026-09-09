@@ -9,12 +9,12 @@ browser — there is no server to send it to.
 
 ## The tools
 
-| Tool        | What it does                                                                                                                                                                         |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Timer**   | Drag the dial or type a length — `90`, `2h`, `1h30`. An hour to the face, an hour to a slot on the ring outside it. Says when it will land, and the alarm repeats until you stop it. |
-| **Elapsed** | Counts up, with no target and no alarm. Says when you started and itemises the breaks; <kbd>p</kbd> on any page takes one and times it.                                              |
-| **Day**     | Say when you are stopping — drag the end of the track, or type the time. The track is the next twelve hours, so a long day looks long.                                               |
-| **Notes**   | Press <kbd>n</kbd> on any page for a box to put a thought in before it goes. Markdown is styled as you type.                                                                         |
+| Tool        | What it does                                                                                                                                                                                          |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Timer**   | Drag the dial or type a length — `90`, `2h`, `1h30`. An hour to the face, an hour to a slot on the ring outside it. Says when it will land, and the alarm repeats until you stop it.                  |
+| **Elapsed** | Counts up, with no target and no alarm. Says when you started and itemises the breaks; <kbd>p</kbd> on any page takes one and times it. Forgot to start it? Say how long it should have been running. |
+| **Day**     | Say when you are stopping — drag the end of the track, or type the time. The track is the next twelve hours, so a long day looks long. Names an earlier start too, if the day was already underway.   |
+| **Notes**   | Press <kbd>n</kbd> on any page for a box to put a thought in before it goes. Markdown is styled as you type.                                                                                          |
 
 ## A few deliberate choices
 
