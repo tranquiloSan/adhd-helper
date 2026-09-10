@@ -25,3 +25,7 @@ vite.config.ts.timestamp-*
 # direnv / nix
 .direnv/
 result
+
+# Agent worktrees
+/.claude/worktrees/
+/.codex/worktrees/
