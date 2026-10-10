@@ -56,10 +56,15 @@ export const nativeAlarm = {
 
 	apply(alarm: AlarmKind, action: NativeAlarmAction): void {
 		if (!this.available) return;
+		// Logged rather than swallowed: Capacitor forwards the console to logcat,
+		// and a rejection here once left every alarm unset with nothing to show.
+		const failed = (error: unknown) => console.error(`Could not update the ${alarm} alarm`, error);
 		if (action.kind === 'schedule') {
-			void plugin.schedule({ kind: alarm, at: action.at, ...MESSAGES[alarm] }).catch(() => {});
+			void plugin
+				.schedule({ kind: alarm, at: Math.round(action.at), ...MESSAGES[alarm] })
+				.catch(failed);
 		} else if (action.kind === 'cancel') {
-			void plugin.cancel({ kind: alarm }).catch(() => {});
+			void plugin.cancel({ kind: alarm }).catch(failed);
 		}
 	},
 

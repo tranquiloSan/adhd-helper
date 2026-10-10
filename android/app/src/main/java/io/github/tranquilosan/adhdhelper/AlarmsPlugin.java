@@ -26,12 +26,15 @@ public class AlarmsPlugin extends Plugin {
     @PluginMethod
     public void schedule(PluginCall call) {
         String kind = kind(call);
-        Double at = call.getDouble("at");
-        if (kind == null || at == null) {
-            call.reject("kind and at are required");
+        // Not getDouble: an epoch in milliseconds is too big for an int, so the
+        // bridge's JSON parser hands it over as a Long, and getDouble returns null
+        // for a Long - which once left every alarm unset.
+        Object at = call.getData().opt("at");
+        if (kind == null || !(at instanceof Number)) {
+            call.reject("kind and a numeric at are required");
             return;
         }
-        Alarms.schedule(getContext(), kind, at.longValue(), call.getString("title", ""), call.getString("body", ""));
+        Alarms.schedule(getContext(), kind, ((Number) at).longValue(), call.getString("title", ""), call.getString("body", ""));
         call.resolve();
     }
 
