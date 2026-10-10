@@ -1,3 +1,5 @@
+import { nativeAlarm } from './native-alarm';
+
 /** How long between re-sounds while the alarm goes unacknowledged. */
 const REPEAT_MS = 20_000;
 
@@ -21,6 +23,9 @@ export class Alarm {
 
 	/** Must be called from a user gesture, or browsers reject it. */
 	static async requestPermission(): Promise<void> {
+		// The Android app's WebView has no Notification API; the system alarm
+		// posts its own notification, and needs the permission for it.
+		if (nativeAlarm.available) return nativeAlarm.requestNotifications();
 		if (typeof Notification === 'undefined') return;
 		if (Notification.permission !== 'default') return;
 		try {

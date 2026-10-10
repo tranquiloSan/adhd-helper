@@ -46,8 +46,8 @@ browser — there is no server to send it to.
   the detail.
   An Android APK of the same app is built from main —
   [latest release](https://github.com/tranquiloSan/adhd-helper/releases/latest) —
-  with the same limit: the alarm fires only while the app is on screen.
-  [ADR&nbsp;0009](docs/adr/0009-an-android-apk-wraps-the-same-build.md)
+  where Android rings the timer's alarm itself, even with the app closed.
+  [ADR&nbsp;0010](docs/adr/0010-on-android-the-alarm-is-the-systems.md)
 
 ## Running it locally
 

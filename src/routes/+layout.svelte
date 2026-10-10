@@ -9,6 +9,7 @@
 	import { elapsed } from '$lib/elapsed.svelte';
 	import { formatDuration } from '$lib/format';
 	import { isTypingTarget } from '$lib/keyboard';
+	import { nativeAlarm, nativeAlarmAction } from '$lib/native-alarm';
 	import { notes } from '$lib/notes.svelte';
 	import NotesOverlay from '$lib/NotesOverlay.svelte';
 	import { timer } from '$lib/timer.svelte';
@@ -106,11 +107,31 @@
 	});
 
 	// Cleanup runs when the status changes away from finished, which is what
-	// stops the alarm when it is dismissed.
+	// stops the alarm when it is dismissed. On Android the system rings it
+	// instead, and a second sound from the page would only talk over it.
 	$effect(() => {
-		if (timer.status !== 'finished') return;
+		if (timer.status !== 'finished' || nativeAlarm.available) return;
 		alarm.start('Your timer has finished.');
 		return () => alarm.stop();
+	});
+
+	// Hands the end of the timer to Android, which rings even with the app
+	// closed, and takes it back on pause, reset or dismissal.
+	$effect(() => {
+		nativeAlarm.apply(nativeAlarmAction(timer.status, timer.endsAt));
+	});
+
+	// Battery optimisation can still hold an alarm back on some phones, so say
+	// so until it is lifted. Checked again on return from the settings screen.
+	let batteryRestricted = $state(false);
+	$effect(() => {
+		if (!nativeAlarm.available) return;
+		const check = async () => {
+			batteryRestricted = await nativeAlarm.batteryRestricted();
+		};
+		void check();
+		document.addEventListener('visibilitychange', check);
+		return () => document.removeEventListener('visibilitychange', check);
 	});
 
 	$effect(() => {
@@ -261,10 +282,26 @@
 	<footer
 		class="mt-auto max-w-prose self-center p-6 text-center text-xs leading-relaxed text-neutral-500"
 	>
-		<p>
-			Built for a desktop browser. On a phone the alarm will not fire once the tab is in the
-			background, so treat it as desktop-only.
-		</p>
+		{#if nativeAlarm.available}
+			<p>The timer's alarm rings even with the app closed, until you stop it.</p>
+			{#if batteryRestricted}
+				<p class="mt-2 text-neutral-400">
+					Android's battery saver can still hold it back.
+					<button
+						type="button"
+						class="underline decoration-neutral-600 underline-offset-2 transition hover:text-neutral-200"
+						onclick={() => nativeAlarm.openBatterySettings()}
+					>
+						Let the app run in the background
+					</button>
+				</p>
+			{/if}
+		{:else}
+			<p>
+				Built for a desktop browser. On a phone the alarm will not fire once the tab is in the
+				background, so treat it as desktop-only.
+			</p>
+		{/if}
 		<p class="mt-2">
 			<a
 				href="https://github.com/tranquiloSan/adhd-helper"
