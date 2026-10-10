@@ -1,4 +1,4 @@
-# On Android the timer's alarm is the system's
+# On Android the alarms are the system's
 
 ADR 0009 shipped the APK with the desktop's limit: the alarm rang only while the
 app was on screen, because Android suspends the WebView once it is not. On a
@@ -22,9 +22,11 @@ does not beep as well; two alarms would only talk over each other.
 
 Three lines drawn around it. The app does not open over the lock screen: the
 notification there carries Stop, and showing the app would show the notes too.
-Only the timer rings natively; the end of the day stays the page's single notice,
-which is meant to be easy to miss. And a reboot is covered - the end
-is kept and set again on boot, ringing at once if it passed while the phone was
+The end of the day goes through the same alarm, so it too arrives with the app
+closed, but as one chime and a notification rather than ringing: the page has
+always announced it once, since the end of the day is when you least want a
+dismiss-me alarm sitting on top of a thought. And a reboot is covered - the end
+is kept and set again on boot, going off at once if it passed while the phone was
 off - but a force stop is not, since Android clears an app's alarms then and
 gives it no chance to object.
 

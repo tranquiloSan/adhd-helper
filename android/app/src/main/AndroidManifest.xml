@@ -25,7 +25,7 @@
 
         </activity>
 
-        <!-- The timer's alarm: see TimerAlarm.java. -->
+        <!-- The timer's alarm and the end of the day: see Alarms.java. -->
         <receiver
             android:name=".AlarmReceiver"
             android:exported="false" />

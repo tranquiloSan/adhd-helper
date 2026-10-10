@@ -16,31 +16,38 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
 
-/** The page's handle on {@link TimerAlarm}; see src/lib/native-alarm.ts. */
+/** The page's handle on {@link Alarms}; see src/lib/native-alarm.ts. */
 @CapacitorPlugin(
-    name = "TimerAlarm",
+    name = "Alarms",
     permissions = { @Permission(strings = { Manifest.permission.POST_NOTIFICATIONS }, alias = "notifications") }
 )
-public class TimerAlarmPlugin extends Plugin {
+public class AlarmsPlugin extends Plugin {
 
     @PluginMethod
     public void schedule(PluginCall call) {
+        String kind = kind(call);
         Double at = call.getDouble("at");
-        if (at == null) {
-            call.reject("at is required");
+        if (kind == null || at == null) {
+            call.reject("kind and at are required");
             return;
         }
-        TimerAlarm.schedule(getContext(), at.longValue(), call.getString("title", "Time is up"), call.getString("body", ""));
+        Alarms.schedule(getContext(), kind, at.longValue(), call.getString("title", ""), call.getString("body", ""));
         call.resolve();
     }
 
     @PluginMethod
     public void cancel(PluginCall call) {
-        TimerAlarm.cancel(getContext());
+        String kind = kind(call);
+        if (kind == null) {
+            call.reject("kind is required");
+            return;
+        }
+        Alarms.cancel(getContext(), kind);
         call.resolve();
     }
 
-    /** Without it the alarm still rings, but the Stop button never appears. */
+    /** Without it the timer still rings, but the Stop button and the end of
+     *  the day's notice never appear. */
     @PluginMethod
     public void requestNotifications(PluginCall call) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || getPermissionState("notifications") == PermissionState.GRANTED) {
@@ -73,5 +80,11 @@ public class TimerAlarmPlugin extends Plugin {
             getActivity().startActivity(new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS));
         }
         call.resolve();
+    }
+
+    /** Only the two kinds the app knows; anything else is a bug in the page. */
+    private static String kind(PluginCall call) {
+        String kind = call.getString("kind");
+        return Alarms.TIMER.equals(kind) || Alarms.DAY.equals(kind) ? kind : null;
     }
 }

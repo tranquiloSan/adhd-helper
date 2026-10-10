@@ -54,15 +54,15 @@ public class AlarmService extends Service {
 
         String title = intent == null ? null : intent.getStringExtra(EXTRA_TITLE);
         String body = intent == null ? null : intent.getStringExtra(EXTRA_BODY);
-        TimerAlarm.createChannels(this);
+        Alarms.createChannels(this);
 
         Intent stop = new Intent(this, AlarmService.class).setAction(ACTION_STOP);
         PendingIntent stopIntent = PendingIntent.getService(this, 0, stop, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
 
         ServiceCompat.startForeground(
             this,
-            TimerAlarm.NOTIFICATION_ID,
-            TimerAlarm.notification(this, TimerAlarm.CHANNEL, title == null ? "Time is up" : title, body == null ? "" : body)
+            Alarms.notificationId(Alarms.TIMER),
+            Alarms.notification(this, Alarms.TIMER_CHANNEL, title == null ? "Time is up" : title, body == null ? "" : body)
                 .setOngoing(true)
                 .addAction(0, "Stop", stopIntent)
                 .build(),

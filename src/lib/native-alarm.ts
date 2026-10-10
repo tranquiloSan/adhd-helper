@@ -1,15 +1,19 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
+import type { DayStatus } from './day.svelte';
 import type { TimerStatus } from './timer.svelte';
 
-type TimerAlarmPlugin = {
-	schedule(options: { at: number; title: string; body: string }): Promise<void>;
-	cancel(): Promise<void>;
+/** The timer rings until stopped; the end of the day chimes once. */
+export type AlarmKind = 'timer' | 'day';
+
+type AlarmsPlugin = {
+	schedule(options: { kind: AlarmKind; at: number; title: string; body: string }): Promise<void>;
+	cancel(options: { kind: AlarmKind }): Promise<void>;
 	requestNotifications(): Promise<void>;
 	batteryStatus(): Promise<{ restricted: boolean }>;
 	openBatterySettings(): Promise<void>;
 };
 
-/** What the Android alarm should be doing for a given timer. */
+/** What an Android alarm should be doing for a given tool. */
 export type NativeAlarmAction =
 	{ kind: 'schedule'; at: number } | { kind: 'cancel' } | { kind: 'keep' };
 
@@ -18,32 +22,44 @@ export type NativeAlarmAction =
  * ringing - cancelling there would silence the alarm the moment the page
  * noticed the timer had run out. Anything else, paused included, holds none.
  */
-export function nativeAlarmAction(status: TimerStatus, endsAt: number | null): NativeAlarmAction {
+export function timerAlarmAction(status: TimerStatus, endsAt: number | null): NativeAlarmAction {
 	if (status === 'running' && endsAt !== null) return { kind: 'schedule', at: endsAt };
 	if (status === 'finished') return { kind: 'keep' };
 	return { kind: 'cancel' };
 }
 
-const plugin = registerPlugin<TimerAlarmPlugin>('TimerAlarm');
+/** The same for the day: a day that is over keeps its notice until it is
+ *  stopped, and stopping clears it. */
+export function dayAlarmAction(status: DayStatus, endsAt: number | null): NativeAlarmAction {
+	if (status === 'running' && endsAt !== null) return { kind: 'schedule', at: endsAt };
+	if (status === 'over') return { kind: 'keep' };
+	return { kind: 'cancel' };
+}
+
+const MESSAGES: Record<AlarmKind, { title: string; body: string }> = {
+	timer: { title: 'Time is up', body: 'Your timer has finished.' },
+	day: { title: 'Day over', body: 'Your day is done.' }
+};
+
+const plugin = registerPlugin<AlarmsPlugin>('Alarms');
 
 /**
- * The timer's alarm on Android, held by the system rather than by the page.
- * See docs/adr/0010-on-android-the-alarm-is-the-systems.md.
+ * The Android app's alarms, held by the system rather than by the page, so
+ * they go off with the app closed. See
+ * docs/adr/0010-on-android-the-alarm-is-the-systems.md.
  *
- * Every call is best-effort: a failure leaves the page's own alarm, which still
- * rings while the app is on screen.
+ * Every call is best-effort: a failure leaves only the page's own notice,
+ * which still works while the app is on screen.
  */
 export const nativeAlarm = {
 	available: Capacitor.getPlatform() === 'android',
 
-	apply(action: NativeAlarmAction): void {
+	apply(alarm: AlarmKind, action: NativeAlarmAction): void {
 		if (!this.available) return;
 		if (action.kind === 'schedule') {
-			void plugin
-				.schedule({ at: action.at, title: 'Time is up', body: 'Your timer has finished.' })
-				.catch(() => {});
+			void plugin.schedule({ kind: alarm, at: action.at, ...MESSAGES[alarm] }).catch(() => {});
 		} else if (action.kind === 'cancel') {
-			void plugin.cancel().catch(() => {});
+			void plugin.cancel({ kind: alarm }).catch(() => {});
 		}
 	},
 

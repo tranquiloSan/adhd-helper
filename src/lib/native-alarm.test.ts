@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { nativeAlarmAction } from './native-alarm';
+import { dayAlarmAction, timerAlarmAction } from './native-alarm';
+import { DayCountdown } from './day.svelte';
 import { Timer } from './timer.svelte';
 
 const START = 1_000_000;
 
 function action(timer: Timer) {
-	return nativeAlarmAction(timer.status, timer.endsAt);
+	return timerAlarmAction(timer.status, timer.endsAt);
 }
 
-describe('nativeAlarmAction', () => {
+describe('timerAlarmAction', () => {
 	it('holds no alarm for an idle timer', () => {
 		expect(action(new Timer())).toEqual({ kind: 'cancel' });
 	});
@@ -40,5 +41,27 @@ describe('nativeAlarmAction', () => {
 
 		timer.reset(START + 70_000);
 		expect(action(timer)).toEqual({ kind: 'cancel' });
+	});
+});
+
+describe('dayAlarmAction', () => {
+	const action = (day: DayCountdown) => dayAlarmAction(day.status, day.endsAt);
+
+	it('sets the alarm at the end of a running day, and drops it when stopped', () => {
+		const day = new DayCountdown();
+		expect(action(day)).toEqual({ kind: 'cancel' });
+
+		day.start(START + 3_600_000, START);
+		expect(action(day)).toEqual({ kind: 'schedule', at: START + 3_600_000 });
+
+		day.stop(START + 60_000);
+		expect(action(day)).toEqual({ kind: 'cancel' });
+	});
+
+	it('leaves the notice of a day that is over until the day is stopped', () => {
+		const day = new DayCountdown();
+		day.start(START + 3_600_000, START);
+		day.sync(START + 3_600_000);
+		expect(action(day)).toEqual({ kind: 'keep' });
 	});
 });

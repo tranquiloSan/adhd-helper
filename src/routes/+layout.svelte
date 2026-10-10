@@ -9,7 +9,7 @@
 	import { elapsed } from '$lib/elapsed.svelte';
 	import { formatDuration } from '$lib/format';
 	import { isTypingTarget } from '$lib/keyboard';
-	import { nativeAlarm, nativeAlarmAction } from '$lib/native-alarm';
+	import { dayAlarmAction, nativeAlarm, timerAlarmAction } from '$lib/native-alarm';
 	import { notes } from '$lib/notes.svelte';
 	import NotesOverlay from '$lib/NotesOverlay.svelte';
 	import { timer } from '$lib/timer.svelte';
@@ -100,9 +100,10 @@
 
 	// One notice, then quiet. Acknowledging is persisted, so a day that ended
 	// while the tab was shut is announced when you return - but only once.
+	// On Android the system has already announced it, app open or not.
 	$effect(() => {
 		if (!day.needsAnnouncement) return;
-		alarm.once('Your day is done.', 'Day over');
+		if (!nativeAlarm.available) alarm.once('Your day is done.', 'Day over');
 		day.acknowledge();
 	});
 
@@ -115,10 +116,14 @@
 		return () => alarm.stop();
 	});
 
-	// Hands the end of the timer to Android, which rings even with the app
-	// closed, and takes it back on pause, reset or dismissal.
+	// Hands the end of the timer and of the day to Android, which goes off even
+	// with the app closed, and takes them back on pause, reset or stop.
 	$effect(() => {
-		nativeAlarm.apply(nativeAlarmAction(timer.status, timer.endsAt));
+		nativeAlarm.apply('timer', timerAlarmAction(timer.status, timer.endsAt));
+	});
+
+	$effect(() => {
+		nativeAlarm.apply('day', dayAlarmAction(day.status, day.endsAt));
 	});
 
 	// Battery optimisation can still hold an alarm back on some phones, so say
@@ -283,10 +288,13 @@
 		class="mt-auto max-w-prose self-center p-6 text-center text-xs leading-relaxed text-neutral-500"
 	>
 		{#if nativeAlarm.available}
-			<p>The timer's alarm rings even with the app closed, until you stop it.</p>
+			<p>
+				The timer rings even with the app closed, until you stop it, and the end of the day sends a
+				notice.
+			</p>
 			{#if batteryRestricted}
 				<p class="mt-2 text-neutral-400">
-					Android's battery saver can still hold it back.
+					Android's battery saver can still hold them back.
 					<button
 						type="button"
 						class="underline decoration-neutral-600 underline-offset-2 transition hover:text-neutral-200"
