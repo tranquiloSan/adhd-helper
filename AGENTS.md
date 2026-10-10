@@ -35,6 +35,7 @@ Read the relevant ADR before changing these behaviors:
 - Current-stretch account in an overlay: ADR 0006.
 - Fixed twelve-hour day timeline: ADR 0007.
 - Starting a stretch in the past: ADR 0008.
+- Android APK as a wrapper of the same build: ADR 0009.
 
 ADRs live in `docs/adr/`. Parked GitHub issues describe conditions for
 revisiting decisions; they are not requests to implement those features.
