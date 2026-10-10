@@ -44,6 +44,11 @@ browser — there is no server to send it to.
   notifications for installed web apps, so a phone alarm needs a server behind
   it. [ADR&nbsp;0001](docs/adr/0001-desktop-only-no-background-timing.md) has
   the detail.
+  An Android APK of the same app is built from main —
+  [latest release](https://github.com/tranquiloSan/adhd-helper/releases/latest) —
+  where Android itself rings the timer and announces the end of the day,
+  even with the app closed.
+  [ADR&nbsp;0010](docs/adr/0010-on-android-the-alarm-is-the-systems.md)
 
 ## Running it locally
 
@@ -56,6 +61,13 @@ npm run dev
 
 `npm run lint`, `npm run check`, `npm test` and `npm run build` are the same
 checks CI runs.
+
+`npm run build:android` builds the web app for Capacitor and copies it into
+`android/`; `cd android && ./gradlew assembleDebug` then needs JDK 21 and the
+Android SDK. CI signs release APKs with a key from four secrets:
+`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and
+`ANDROID_KEY_PASSWORD`. Without them it publishes a debug APK, which will not
+install over the previous build.
 
 Found a problem or want something added?
 [Open an issue](https://github.com/tranquiloSan/adhd-helper/issues).

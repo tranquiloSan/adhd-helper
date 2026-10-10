@@ -69,3 +69,87 @@ jobs:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v5
+
+  android:
+    name: Android APK
+    # Built on pull requests too, so a change that breaks the app is caught
+    # before main; only main publishes it.
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # Capacitor 8 needs JDK 21. The runner already carries the Android SDK.
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - run: npm ci
+
+      - name: Build the web app for Android
+        run: npm run build:android
+
+      # Without the signing secrets the build falls back to a debug APK, which
+      # installs but carries a key unique to this run: the next build will not
+      # install over it, and uninstalling first loses the notes.
+      - name: Build APK
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          VERSION_CODE: ${{ github.run_number }}
+          VERSION_NAME: 0.0.${{ github.run_number }}
+        working-directory: android
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            export ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/release.jks"
+            echo "$KEYSTORE_BASE64" | base64 -d > "$ANDROID_KEYSTORE_PATH"
+            ./gradlew --no-daemon assembleRelease
+            cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/adhd-helper.apk"
+          else
+            echo "::warning::No signing secrets; building a debug APK that will not update in place."
+            ./gradlew --no-daemon assembleDebug
+            cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/adhd-helper.apk"
+          fi
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: adhd-helper-apk
+          path: ${{ runner.temp }}/adhd-helper.apk
+          if-no-files-found: error
+
+  release-apk:
+    name: Publish APK
+    # A release, unlike a workflow artifact, downloads on a phone without
+    # signing in, and releases/latest always points at the newest build.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: android
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: adhd-helper-apk
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "android-${{ github.run_number }}" adhd-helper.apk \
+            --repo "${{ github.repository }}" \
+            --target "${{ github.sha }}" \
+            --title "Android build ${{ github.run_number }}" \
+            --notes "Built from ${{ github.sha }}." \
+            --latest

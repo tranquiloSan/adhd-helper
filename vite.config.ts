@@ -15,8 +15,9 @@ export default defineConfig({
 			adapter: adapter(),
 			paths: {
 				// The site is served from a GitHub Pages project subpath, not the domain
-				// root. Applied in dev too, so base-path mistakes surface locally.
-				base: '/adhd-helper'
+				// root. Applied in dev too, so base-path mistakes surface locally. The
+				// Android build sets BASE_PATH empty: Capacitor serves from the root.
+				base: (process.env.BASE_PATH ?? '/adhd-helper') as '' | `/${string}`
 			}
 		})
 	],
